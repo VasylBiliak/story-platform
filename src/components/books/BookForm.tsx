@@ -1,12 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter, ChapterImage } from "@/lib/types";
-import { DEFAULT_IMG } from "@/data/books";
+import { getBooks, saveBooks, getChapters, saveChapters } from "@/lib/storage";
 
-interface Props {
-  onCreate: (book: Book, chapters: Chapter[]) => void;
+export type BookFormMode = "create" | "edit";
+
+export interface BookFormProps {
+  mode: BookFormMode;
+  initialData?: {
+    book: Book;
+    chapters: Chapter[];
+  };
+  onSubmit?: () => void;
 }
 
 function slugify(text: string): string {
@@ -29,20 +37,39 @@ type FormState = {
   book: {
     title: string;
     description: string;
+    cover: string;
     author: string;
   };
   chapters: ChapterInput[];
 };
 
-const INITIAL_STATE: FormState = {
-  book: {
-    title: "",
-    description: "",
-    cover: "",
-    author: "",
-  },
-  chapters: [{ title: "", content: "", isFree: true, images: [] }],
-};
+function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
+  if (book && chapters) {
+    return {
+      book: {
+        title: book.title,
+        description: book.description,
+        cover: book.cover,
+        author: book.author,
+      },
+      chapters: chapters.map((c) => ({
+        title: c.title,
+        content: c.content,
+        isFree: c.isFree,
+        images: c.images || [],
+      })),
+    };
+  }
+  return {
+    book: {
+      title: "",
+      description: "",
+      cover: "",
+      author: "",
+    },
+    chapters: [{ title: "", content: "", isFree: true, images: [] }],
+  };
+}
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
@@ -59,8 +86,11 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function CreateBookWithChaptersForm({ onCreate }: Props) {
-  const [form, setForm] = useState<FormState>(INITIAL_STATE);
+export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(() => 
+    createInitialState(initialData?.book, initialData?.chapters)
+  );
   const lastInputRef = useRef<HTMLInputElement | null>(null);
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
 
@@ -180,37 +210,94 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
     e.preventDefault();
     if (!isValid) return;
 
-    const bookId = `${slugify(form.book.title)}-${Date.now()}`;
+    if (mode === "create") {
+      const bookId = `${slugify(form.book.title)}-${Date.now()}`;
 
-    const newBook: Book = {
-      id: bookId,
-      title: form.book.title.trim(),
-      description: form.book.description.trim(),
-      cover: form.book.cover.trim(),
-      author: form.book.author.trim(),
-    };
+      const newBook: Book = {
+        id: bookId,
+        title: form.book.title.trim(),
+        description: form.book.description.trim(),
+        cover: form.book.cover.trim(),
+        author: form.book.author.trim(),
+      };
 
-    const newChapters: Chapter[] = form.chapters.map((c, i) => ({
-      id: `${bookId}-${i + 1}`,
-      bookId,
-      title: c.title.trim(),
-      slug: slugify(c.title) || `chapter-${i + 1}`,
-      content: c.content.trim(),
-      isFree: i === 0 ? true : c.isFree,
-      images: c.images.length > 0 
-        ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
-        : undefined,
-    }));
+      const newChapters: Chapter[] = form.chapters.map((c, i) => ({
+        id: `${bookId}-${i + 1}`,
+        bookId,
+        title: c.title.trim(),
+        slug: slugify(c.title) || `chapter-${i + 1}`,
+        content: c.content.trim(),
+        isFree: i === 0 ? true : c.isFree,
+        images: c.images.length > 0 
+          ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
+          : undefined,
+      }));
 
-    onCreate(newBook, newChapters);
-    setForm(INITIAL_STATE);
+      const existingBooks = getBooks();
+      const existingChapters = getChapters();
+      
+      saveBooks([...existingBooks, newBook]);
+      saveChapters([...existingChapters, ...newChapters]);
+      
+      console.log("Created Book:", newBook);
+      console.log("Created Chapters:", newChapters);
+    } else if (mode === "edit" && initialData) {
+      const bookId = initialData.book.id;
+
+      const updatedBook: Book = {
+        ...initialData.book,
+        title: form.book.title.trim(),
+        description: form.book.description.trim(),
+        cover: form.book.cover.trim(),
+        author: form.book.author.trim(),
+      };
+
+      const updatedChapters: Chapter[] = form.chapters.map((c, i) => ({
+        id: `${bookId}-${i + 1}`,
+        bookId,
+        title: c.title.trim(),
+        slug: slugify(c.title) || `chapter-${i + 1}`,
+        content: c.content.trim(),
+        isFree: i === 0 ? true : c.isFree,
+        images: c.images.length > 0 
+          ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
+          : undefined,
+      }));
+
+      const existingBooks = getBooks();
+      const existingChapters = getChapters();
+      
+      // Update book
+      const updatedBooks = existingBooks.map((b) => 
+        b.id === bookId ? updatedBook : b
+      );
+      
+      // Replace chapters for this book
+      const filteredChapters = existingChapters.filter((c) => c.bookId !== bookId);
+      
+      saveBooks(updatedBooks);
+      saveChapters([...filteredChapters, ...updatedChapters]);
+      
+      console.log("Updated Book:", updatedBook);
+      console.log("Updated Chapters:", updatedChapters);
+    }
+
+    onSubmit?.();
+    
+    if (mode === "create") {
+      setForm(createInitialState());
+    } else {
+      router.push("/dashboard/books");
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Book Section */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-text-primary">Book Details</h3>
+        <h3 className="text-lg font-bold text-text-primary">
+          {mode === "edit" ? "Edit Book Details" : "Book Details"}
+        </h3>
 
         <div>
           <label htmlFor="book-title" className="block text-sm text-text-secondary mb-1">
@@ -248,7 +335,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
             id="book-description"
             value={form.book.description}
             onChange={(e) => updateBook("description", e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-[80px]"
+            className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-20"
             placeholder="Book description"
           />
         </div>
@@ -350,7 +437,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
                   onChange={(e) =>
                     updateChapter(index, "content", e.target.value)
                   }
-                  className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-[100px]"
+                  className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-25"
                   placeholder="Chapter content"
                 />
               </div>
@@ -433,7 +520,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
         disabled={!isValid}
         className="w-full px-4 py-2 rounded-lg btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Create Book
+        {mode === "edit" ? "Save Changes" : "Create Book"}
       </button>
     </form>
   );

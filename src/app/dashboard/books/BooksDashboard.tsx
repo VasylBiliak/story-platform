@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter } from "@/lib/types";
-import { getBooks, saveBooks, getChapters, saveChapters } from "@/lib/storage";
-import { CreateBookWithChaptersForm } from "@/components/forms/CreateBookWithChaptersForm";
+import { getBooks, getChapters } from "@/lib/storage";
+import { BookForm } from "@/components/books/BookForm";
 
 export function BooksDashboard() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -17,15 +17,9 @@ export function BooksDashboard() {
     setLoaded(true);
   }, []);
 
-  const handleCreate = (newBook: Book, newChapters: Chapter[]) => {
-    const updatedBooks = [...books, newBook];
-    const updatedChapters = [...chapters, ...newChapters];
-    setBooks(updatedBooks);
-    setChapters(updatedChapters);
-    saveBooks(updatedBooks);
-    saveChapters(updatedChapters);
-    console.log("Created Book:", newBook);
-    console.log("Created Chapters:", newChapters);
+  const handleSubmit = () => {
+    setBooks(getBooks());
+    setChapters(getChapters());
   };
 
   const getChaptersForBook = (bookId: string) =>
@@ -42,7 +36,7 @@ export function BooksDashboard() {
   return (
     <div className="space-y-10">
       <div className="card card-hover rounded-xl p-6">
-        <CreateBookWithChaptersForm onCreate={handleCreate} />
+        <BookForm mode="create" onSubmit={handleSubmit} />
       </div>
 
       <div>

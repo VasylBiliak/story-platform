@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Book } from '@/lib/types';
+import { DEFAULT_IMG } from "@/data/books";
 
 type ExtendedBook = Book & { isLocal?: boolean };
 
@@ -18,7 +19,8 @@ export function BookCard({ book }: BookCardProps) {
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden">
         <Image
-          src={book.cover}
+          src={book.cover || DEFAULT_IMG}
+          onError={(e) => (e.currentTarget.src = DEFAULT_IMG)}
           alt={`Cover of ${book.title}`}
           fill
           className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
