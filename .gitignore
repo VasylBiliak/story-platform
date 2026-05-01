@@ -17,7 +17,6 @@ build/
 
 # Turbopack cache
 .cache/
-
 # Environment
 .env
 .env.*
