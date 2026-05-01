@@ -4,6 +4,7 @@ export interface Book {
   description: string;
   cover: string;
   author: string;
+  images?: string[];
 }
 
 export interface Chapter {
@@ -14,4 +15,5 @@ export interface Chapter {
   content: string;
   isFree: boolean;
   price?: number;
+  images?: string[];
 }

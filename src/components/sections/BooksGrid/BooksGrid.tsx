@@ -2,16 +2,32 @@
 
 import React, { useState, useEffect } from 'react';
 import { BookCard } from '@/components/book/BookCard';
-import { getBooks, Book } from '@/lib/api/books';
+import { getBooks as getStaticBooks } from '@/lib/api/books';
+import { getBooks as getLocalBooks } from '@/lib/storage';
+import { Book } from '@/lib/types';
+
+type ExtendedBook = Book & { isLocal?: boolean };
 
 const BooksGrid: React.FC = () => {
-  const [books, setBooks] = useState<Book[]>([]);
+  const [books, setBooks] = useState<ExtendedBook[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadBooks() {
-      const data = await getBooks();
-      setBooks(data);
+      const staticBooks = await getStaticBooks();
+      const mappedStatic: ExtendedBook[] = staticBooks.map((b) => ({
+        ...b,
+        isLocal: false,
+      }));
+
+      let localBooks: ExtendedBook[] = [];
+      if (typeof window !== 'undefined') {
+        localBooks = getLocalBooks()
+          .filter((b) => !staticBooks.some((sb) => sb.id === b.id))
+          .map((b) => ({ ...b, isLocal: true }));
+      }
+
+      setBooks([...mappedStatic, ...localBooks]);
       setIsLoading(false);
     }
     loadBooks();
@@ -23,6 +39,17 @@ const BooksGrid: React.FC = () => {
         <div className="text-center py-12">
           <p className="text-text-secondary">Loading books...</p>
         </div>
+      </section>
+    );
+  }
+
+  if (books.length === 0) {
+    return (
+      <section id="books" className="px-4 sm:px-6 md:px-10 py-10">
+        <h2 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
+          Featured Books
+        </h2>
+        <p className="text-text-secondary text-center py-12">No books available.</p>
       </section>
     );
   }

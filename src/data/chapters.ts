@@ -61,7 +61,7 @@ export const chapters: Chapter[] = [
     isFree: false,
     price: 2,
   },
-    {
+  {
     id: 'dark-future-5',
     bookId: 'dark-future',
     title: 'Chapter 5: New Reality',
@@ -70,7 +70,7 @@ export const chapters: Chapter[] = [
     isFree: false,
     price: 2,
   },
-      {
+  {
     id: 'dark-future-6',
     bookId: 'dark-future',
     title: 'Chapter 6: New Reality',
@@ -79,7 +79,7 @@ export const chapters: Chapter[] = [
     isFree: false,
     price: 2,
   },
-        {
+  {
     id: 'dark-future-7',
     bookId: 'dark-future',
     title: 'Chapter 7: New Reality',
@@ -88,15 +88,7 @@ export const chapters: Chapter[] = [
     isFree: false,
     price: 2,
   },
-          {
-    id: 'dark-future-8',
-    bookId: 'dark-future',
-    title: 'Chapter 8: New Reality',
-    slug: 'chapter-8-new-reality',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
+
   // Book: lost-in-space
   {
     id: 'lost-in-space-1',
@@ -125,24 +117,6 @@ export const chapters: Chapter[] = [
     content: content,
     isFree: true,
   },
-  {
-    id: 'ancient-kingdom-2',
-    bookId: 'ancient-kingdom',
-    title: 'Chapter 2: War Begins',
-    slug: 'chapter-2-war-begins',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-  {
-    id: 'ancient-kingdom-3',
-    bookId: 'ancient-kingdom',
-    title: 'Chapter 3: Blood and Fire',
-    slug: 'chapter-3-blood-and-fire',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
 
   // Book: shadow-hunter
   {
@@ -153,15 +127,7 @@ export const chapters: Chapter[] = [
     content: content,
     isFree: true,
   },
-  {
-    id: 'shadow-hunter-2',
-    bookId: 'shadow-hunter',
-    title: 'Chapter 2: Creatures in the Dark',
-    slug: 'chapter-2-creatures-in-the-dark',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
+
 
   // Book: time-loop
   {
@@ -171,24 +137,6 @@ export const chapters: Chapter[] = [
     slug: 'chapter-1-the-same-day',
     content: content,
     isFree: true,
-  },
-  {
-    id: 'time-loop-2',
-    bookId: 'time-loop',
-    title: 'Chapter 2: Trying Again',
-    slug: 'chapter-2-trying-again',
-    content: content,
-    isFree: false,
-    price: 3,
-  },
-  {
-    id: 'time-loop-3',
-    bookId: 'time-loop',
-    title: 'Chapter 3: Breaking the Loop',
-    slug: 'chapter-3-breaking-the-loop',
-    content: content,
-    isFree: false,
-    price: 3,
   },
 ];
 
