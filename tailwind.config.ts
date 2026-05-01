@@ -15,6 +15,7 @@ const config: Config = {
         'text-primary': 'var(--color-text-primary)',
         'text-secondary': 'var(--color-text-secondary)',
         'text-tertiary': 'var(--color-text-tertiary)',
+        'text--accent-buy': 'var(--color-accent-buy)',
         // Border colors
         'border': 'var(--color-border)',
         'border-hover': 'var(--color-border-hover)',

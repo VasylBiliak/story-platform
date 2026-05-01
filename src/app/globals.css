@@ -29,6 +29,7 @@ rgb(0, 13, 17) 60%, rgb(3, 3, 40) 100%);
     --color-accent-primary-hover: #E6003E;
     --color-accent-secondary: #2C7A4B;
     --color-accent-tertiary: #DAC165;
+    --color-accent-buy: #DAC165;;
 
     /* Colors - Status */
     --color-success: #22c55e;

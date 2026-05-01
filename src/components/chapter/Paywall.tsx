@@ -60,9 +60,10 @@ export function Paywall({ chapter }: PaywallProps) {
             onClick={handlePurchase}
             className=" items-center justify-center text-lg 
                                 cursor-pointer overflow-hidden border-2 border-accent-primary 
-                                px-8 py-4 tracking-[0.15em] text-yellow-500 transition-all 
+                                px-8 py-4 tracking-[0.15em] text--accent-buy transition-all 
                                 duration-200 
-                                hover:bg-yellow-500 hover:text-bg-primary active:scale-95 
+                                hover:bg-accent-buy hover:text-bg-primary hover:border-accent-buy
+                                 active:scale-95 
                                 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500"
           >
             Buy for ${(chapter.finalPrice || 0).toFixed(2)}
