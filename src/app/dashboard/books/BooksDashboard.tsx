@@ -76,13 +76,6 @@ export function BooksDashboard() {
                         <p className="text-sm text-text-tertiary mt-1 line-clamp-2">
                           {book.description}
                         </p>
-                        {book.images && book.images.length > 0 && (
-                          <div className="flex gap-1 mt-2">
-                            {book.images.map((src, i) => (
-                              <img key={i} src={src} alt={`Book img ${i + 1}`} className="w-8 h-8 object-cover rounded border border-border" />
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

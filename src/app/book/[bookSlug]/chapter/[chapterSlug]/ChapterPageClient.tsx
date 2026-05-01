@@ -156,8 +156,19 @@ export default function ChapterPageClient() {
 
             {chapter.images && chapter.images.length > 0 && (
               <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {chapter.images.map((src, i) => (
-                  <img key={i} src={src} alt={`Chapter image ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-border" />
+                {chapter.images.map((img, i) => (
+                  <figure key={i} className="space-y-2">
+                    <img 
+                      src={img.url} 
+                      alt={`Chapter image ${i + 1}`} 
+                      className="w-full h-32 object-cover rounded-lg border border-border" 
+                    />
+                    {img.caption && (
+                      <figcaption className="text-xs text-accent-primary text-center">
+                        {img.caption}
+                      </figcaption>
+                    )}
+                  </figure>
                 ))}
               </div>
             )}

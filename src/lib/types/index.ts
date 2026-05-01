@@ -1,10 +1,14 @@
+export interface ChapterImage {
+  url: string; // base64
+  caption: string;
+}
+
 export interface Book {
   id: string;
   title: string;
   description: string;
-  cover: string;
+  cover: string; // base64 (required)
   author: string;
-  images?: string[];
 }
 
 export interface Chapter {
@@ -15,5 +19,5 @@ export interface Chapter {
   content: string;
   isFree: boolean;
   price?: number;
-  images?: string[];
+  images?: ChapterImage[]; // max 3
 }

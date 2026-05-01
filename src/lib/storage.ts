@@ -1,4 +1,4 @@
-import { Book, Chapter } from '@/lib/types';
+import { Book, Chapter, ChapterImage } from '@/lib/types';
 import { books as mockBooks } from '@/data/books';
 import { chapters as mockChapters } from '@/data/chapters';
 
@@ -12,6 +12,27 @@ function safeParse<T>(json: string | null, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+// Migrate old string[] images to ChapterImage[] format
+function migrateChapterImages(chapters: Chapter[]): Chapter[] {
+  return chapters.map((chapter) => {
+    if (!chapter.images) return chapter;
+    
+    // Check if images are old format (string array) or new format (ChapterImage[])
+    const firstImage = chapter.images[0];
+    if (typeof firstImage === 'string') {
+      // Old format: string[] → new format: ChapterImage[]
+      return {
+        ...chapter,
+        images: (chapter.images as unknown as string[]).map((url) => ({
+          url,
+          caption: '',
+        })),
+      };
+    }
+    return chapter;
+  });
 }
 
 export function getBooks(): Book[] {
@@ -36,7 +57,8 @@ export function getChapters(): Chapter[] {
     localStorage.setItem(CHAPTERS_KEY, JSON.stringify(mockChapters));
     return [...mockChapters];
   }
-  return safeParse<Chapter[]>(stored, []);
+  const chapters = safeParse<Chapter[]>(stored, []);
+  return migrateChapterImages(chapters);
 }
 
 export function saveChapters(chapters: Chapter[]): void {

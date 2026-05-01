@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Book, Chapter } from "@/lib/types";
+import { Book, Chapter, ChapterImage } from "@/lib/types";
 import { DEFAULT_IMG } from "@/data/books";
 
 interface Props {
@@ -22,7 +22,7 @@ type ChapterInput = {
   title: string;
   content: string;
   isFree: boolean;
-  images: string[];
+  images: ChapterImage[];
 };
 
 type FormState = {
@@ -31,7 +31,6 @@ type FormState = {
     description: string;
     cover: string;
     author: string;
-    images: string[];
   };
   chapters: ChapterInput[];
 };
@@ -42,7 +41,6 @@ const INITIAL_STATE: FormState = {
     description: "",
     cover: "",
     author: "",
-    images: [],
   },
   chapters: [{ title: "", content: "", isFree: true, images: [] }],
 };
@@ -110,43 +108,39 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
     }));
   };
 
-  const handleBookImages = async (files: FileList | null) => {
-    if (!files) return;
-    const remainingSlots = 3 - form.book.images.length;
-    if (remainingSlots <= 0) return;
-    const toProcess = Array.from(files).slice(0, remainingSlots);
+  const handleBookCover = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
     try {
-      const base64s = await Promise.all(toProcess.map(fileToBase64));
+      const base64 = await fileToBase64(file);
       setForm((prev) => ({
         ...prev,
-        book: { ...prev.book, images: [...prev.book.images, ...base64s] },
+        book: { ...prev.book, cover: base64 },
       }));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to process image");
     }
   };
 
-  const removeBookImage = (index: number) => {
+  const removeBookCover = () => {
     setForm((prev) => ({
       ...prev,
-      book: {
-        ...prev.book,
-        images: prev.book.images.filter((_, i) => i !== index),
-      },
+      book: { ...prev.book, cover: "" },
     }));
   };
 
   const handleChapterImages = async (chapterIndex: number, files: FileList | null) => {
     if (!files) return;
     const chapter = form.chapters[chapterIndex];
-    const remainingSlots = 5 - chapter.images.length;
+    const remainingSlots = 3 - chapter.images.length;
     if (remainingSlots <= 0) return;
     const toProcess = Array.from(files).slice(0, remainingSlots);
     try {
       const base64s = await Promise.all(toProcess.map(fileToBase64));
+      const newImages: ChapterImage[] = base64s.map((url) => ({ url, caption: "" }));
       setForm((prev) => {
         const next = [...prev.chapters];
-        next[chapterIndex] = { ...next[chapterIndex], images: [...next[chapterIndex].images, ...base64s] };
+        next[chapterIndex] = { ...next[chapterIndex], images: [...next[chapterIndex].images, ...newImages] };
         return { ...prev, chapters: next };
       });
     } catch (err) {
@@ -165,9 +159,20 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
     });
   };
 
+  const updateChapterImageCaption = (chapterIndex: number, imageIndex: number, caption: string) => {
+    setForm((prev) => {
+      const next = [...prev.chapters];
+      const updatedImages = [...next[chapterIndex].images];
+      updatedImages[imageIndex] = { ...updatedImages[imageIndex], caption };
+      next[chapterIndex] = { ...next[chapterIndex], images: updatedImages };
+      return { ...prev, chapters: next };
+    });
+  };
+
   const isValid =
     form.book.title.trim().length > 0 &&
     form.book.author.trim().length > 0 &&
+    form.book.cover.trim().length > 0 &&
     form.chapters.every(
       (c) => c.title.trim().length > 0 && c.content.trim().length > 0
     );
@@ -182,9 +187,8 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
       id: bookId,
       title: form.book.title.trim(),
       description: form.book.description.trim(),
-      cover: form.book.cover.trim() || DEFAULT_IMG,
+      cover: form.book.cover.trim(),
       author: form.book.author.trim(),
-      images: form.book.images.length > 0 ? form.book.images : undefined,
     };
 
     const newChapters: Chapter[] = form.chapters.map((c, i) => ({
@@ -194,7 +198,9 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
       slug: slugify(c.title) || `chapter-${i + 1}`,
       content: c.content.trim(),
       isFree: i === 0 ? true : c.isFree,
-      images: c.images.length > 0 ? c.images : undefined,
+      images: c.images.length > 0 
+        ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
+        : undefined,
     }));
 
     onCreate(newBook, newChapters);
@@ -249,50 +255,34 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
         </div>
 
         <div>
-          <label htmlFor="book-cover" className="block text-sm text-text-secondary mb-1">
-            Cover URL
-          </label>
-          <input
-            id="book-cover"
-            type="text"
-            value={form.book.cover}
-            onChange={(e) => updateBook("cover", e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
-            placeholder="https://..."
-          />
-        </div>
-
-        <div>
           <label className="block text-sm text-text-secondary mb-1">
-            Book Images <span className="text-text-tertiary">({form.book.images.length}/3)</span>
+            Cover Image <span className="text-text-tertiary">(1 required, 2MB max)</span>
           </label>
-          {form.book.images.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {form.book.images.map((src, i) => (
-                <div key={i} className="relative group">
-                  <img src={src} alt={`Book preview ${i + 1}`} className="w-full h-20 object-cover rounded-md border border-border" />
-                  <button
-                    type="button"
-                    onClick={() => removeBookImage(i)}
-                    className="absolute top-1 right-1 w-5 h-5 bg-bg-primary/80 text-text-secondary hover:text-accent-primary rounded-full flex items-center justify-center text-xs transition"
-                    title="Remove image"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+          {form.book.cover ? (
+            <div className="relative inline-block mb-3">
+              <img
+                src={form.book.cover}
+                alt="Book cover preview"
+                className="w-24 h-32 object-cover rounded-md border border-border"
+              />
+              <button
+                type="button"
+                onClick={removeBookCover}
+                className="absolute top-1 right-1 w-6 h-6 bg-bg-primary/90 text-text-secondary hover:text-accent-primary rounded-full flex items-center justify-center text-sm transition"
+                title="Remove cover"
+              >
+                ×
+              </button>
             </div>
-          )}
-          {form.book.images.length < 3 && (
-            <label className="block w-full px-3 py-2 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
+          ) : (
+            <label className="block w-full px-3 py-3 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
               <input
                 type="file"
                 accept="image/*"
-                multiple
                 className="hidden"
-                onChange={(e) => handleBookImages(e.target.files)}
+                onChange={(e) => handleBookCover(e.target.files)}
               />
-              + Upload images (max 3, 2MB each)
+              + Upload cover image
             </label>
           )}
         </div>
@@ -368,26 +358,35 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
 
               <div>
                 <label className="block text-sm text-text-secondary mb-1">
-                  Chapter Images <span className="text-text-tertiary">({chapter.images.length}/5)</span>
+                  Chapter Images <span className="text-text-tertiary">(up to 3)</span>
                 </label>
                 {chapter.images.length > 0 && (
-                  <div className="grid grid-cols-5 gap-2 mb-3">
-                    {chapter.images.map((src, i) => (
-                      <div key={i} className="relative group">
-                        <img src={src} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
-                        <button
-                          type="button"
-                          onClick={() => removeChapterImage(index, i)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-bg-primary/80 text-text-secondary hover:text-accent-primary rounded-full flex items-center justify-center text-xs transition"
-                          title="Remove image"
-                        >
-                          ×
-                        </button>
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    {chapter.images.map((img, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="relative group">
+                          <img src={img.url} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
+                          <button
+                            type="button"
+                            onClick={() => removeChapterImage(index, i)}
+                            className="absolute top-1 right-1 w-5 h-5 bg-bg-primary/80 text-text-secondary hover:text-accent-primary rounded-full flex items-center justify-center text-xs transition"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={img.caption}
+                          onChange={(e) => updateChapterImageCaption(index, i, e.target.value)}
+                          placeholder="Enter caption..."
+                          className="w-full px-2 py-1 text-xs bg-bg-primary border border-border rounded text-text-primary outline-none focus:border-accent-primary transition"
+                        />
                       </div>
                     ))}
                   </div>
                 )}
-                {chapter.images.length < 5 && (
+                {chapter.images.length < 3 && (
                   <label className="block w-full px-3 py-2 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
                     <input
                       type="file"
@@ -396,7 +395,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
                       className="hidden"
                       onChange={(e) => handleChapterImages(index, e.target.files)}
                     />
-                    + Upload images (max 5, 2MB each)
+                    + Upload images (max 3, 2MB each)
                   </label>
                 )}
               </div>
