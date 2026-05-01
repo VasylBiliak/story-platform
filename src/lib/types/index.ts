@@ -9,6 +9,7 @@ export interface Book {
   description: string;
   cover: string; // base64 (required)
   author: string;
+  images?: string[]; // max 3
 }
 
 export interface Chapter {
@@ -18,6 +19,8 @@ export interface Chapter {
   slug: string;
   content: string;
   isFree: boolean;
-  price?: number;
+  price?: number;        // base price in USD
+  discount?: number;     // percentage (0–999)
+  finalPrice?: number;   // computed
   images?: ChapterImage[]; // max 3
 }

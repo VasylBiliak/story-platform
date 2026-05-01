@@ -44,10 +44,17 @@ export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
           </span>
         </div>
       </div>
-      {!chapter.isFree && chapter.price && (
-        <span className="text-sm font-semibold">
-          ${chapter.price.toFixed(2)}
-        </span>
+      {!chapter.isFree && chapter.finalPrice !== undefined && (
+        <div className="text-right">
+          <div className="text-sm font-semibold text-accent-primary">
+            ${chapter.finalPrice.toFixed(2)}
+          </div>
+          {chapter.discount && chapter.discount > 0 && chapter.price && (
+            <div className="text-xs text-text-tertiary">
+              <span className="line-through">${chapter.price.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
       )}
     </Link>
   );

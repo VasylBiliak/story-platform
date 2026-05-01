@@ -58,9 +58,18 @@ export function Paywall({ chapter }: PaywallProps) {
           </p>
           <button
             onClick={handlePurchase}
-            className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 bg-status-warning text-white font-semibold rounded-lg hover:bg-status-warning/80 transition-colors focus:outline-none focus:ring-2 focus:ring-status-warning focus:ring-offset-2"
+            className="w-full sm:w-auto inline-flex items-center 
+            justify-center px-8 py-3 bg-status-warning text-accent-primary 
+            font-semibold rounded-lg hover:bg-status-warning/80 
+            transition-colors focus:outline-none focus:ring-2 
+            focus:ring-status-warning focus:ring-offset-2"
           >
-            Buy for ${chapter.price?.toFixed(2)}
+            Buy for ${(chapter.finalPrice || 0).toFixed(2)}
+            {chapter.price && chapter.discount && chapter.discount > 0 && (
+              <span className="ml-2 text-sm line-through text-text-tertiary">
+                ${chapter.price.toFixed(2)}
+              </span>
+            )}
           </button>
           <p className="mt-4 text-xs text-text-tertiary">
             Secure payment powered by Stripe • Instant access after purchase

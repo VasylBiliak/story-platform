@@ -101,15 +101,30 @@ export function BooksDashboard() {
                                   </span>
                                 )}
                               </div>
-                              <span
-                                className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                                  chapter.isFree
-                                    ? "border-border text-text-secondary"
-                                    : "border-accent-primary text-accent-primary"
-                                }`}
-                              >
-                                {chapter.isFree ? "FREE" : "LOCKED"}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                    chapter.isFree
+                                      ? "border-border text-text-secondary"
+                                      : "border-accent-primary text-accent-primary"
+                                  }`}
+                                >
+                                  {chapter.isFree ? "FREE" : "LOCKED"}
+                                </span>
+                                {!chapter.isFree && chapter.finalPrice !== undefined && (
+                                  <div className="text-right">
+                                    <div className="text-xs font-semibold text-accent-primary">
+                                      ${chapter.finalPrice.toFixed(2)}
+                                    </div>
+                                    {chapter.discount && chapter.discount > 0 && chapter.price && (
+                                      <div className="text-xs text-text-tertiary">
+                                        <span className="line-through">${chapter.price.toFixed(2)}</span>
+                                        <span className="ml-1">-{chapter.discount}%</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </motion.li>
                           ))}
                         </AnimatePresence>

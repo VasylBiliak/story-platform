@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter, ChapterImage } from "@/lib/types";
 import { getBooks, saveBooks, getChapters, saveChapters } from "@/lib/storage";
+import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
+import { ConfirmModal } from "@/components/ui/ConfirmModal/ConfirmModal";
 
 export type BookFormMode = "create" | "edit";
 
@@ -30,6 +32,8 @@ type ChapterInput = {
   title: string;
   content: string;
   isFree: boolean;
+  price?: number;
+  discount?: number;
   images: ChapterImage[];
 };
 
@@ -56,6 +60,8 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
         title: c.title,
         content: c.content,
         isFree: c.isFree,
+        price: c.price,
+        discount: c.discount,
         images: c.images || [],
       })),
     };
@@ -71,12 +77,11 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
   };
 }
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (file.size > MAX_FILE_SIZE) {
-      reject(new Error("File exceeds 2MB limit"));
+    const validation = validateImage(file);
+    if (!validation.valid) {
+      reject(new Error(validation.error));
       return;
     }
     const reader = new FileReader();
@@ -86,6 +91,11 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function calculateFinalPrice(price: number, discount: number = 0): number {
+  const finalPrice = price * (1 - discount / 100);
+  return Math.max(0, Math.round(finalPrice * 100) / 100); // Round to 2 decimal places, clamp to >= 0
+}
+
 export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(() => 
@@ -93,22 +103,34 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   );
   const lastInputRef = useRef<HTMLInputElement | null>(null);
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const updateBook = (field: keyof FormState["book"], value: string) => {
+    const sanitized = sanitizeText(value);
     setForm((prev) => ({
       ...prev,
-      book: { ...prev.book, [field]: value },
+      book: { ...prev.book, [field]: sanitized },
     }));
   };
 
   const updateChapter = (
     index: number,
     field: keyof ChapterInput,
-    value: string | boolean
+    value: string | boolean | number
   ) => {
+    let safeValue: string | boolean | number | undefined;
+    if (typeof value === "string") {
+      if (field === "price" || field === "discount") {
+        safeValue = value === "" ? undefined : parseFloat(value);
+      } else {
+        safeValue = sanitizeText(value);
+      }
+    } else {
+      safeValue = value;
+    }
     setForm((prev) => {
       const next = [...prev.chapters];
-      next[index] = { ...next[index], [field]: value };
+      next[index] = { ...next[index], [field]: safeValue };
       return { ...prev, chapters: next };
     });
   };
@@ -189,10 +211,11 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   };
 
   const updateChapterImageCaption = (chapterIndex: number, imageIndex: number, caption: string) => {
+    const sanitized = sanitizeText(caption);
     setForm((prev) => {
       const next = [...prev.chapters];
       const updatedImages = [...next[chapterIndex].images];
-      updatedImages[imageIndex] = { ...updatedImages[imageIndex], caption };
+      updatedImages[imageIndex] = { ...updatedImages[imageIndex], caption: sanitized };
       next[chapterIndex] = { ...next[chapterIndex], images: updatedImages };
       return { ...prev, chapters: next };
     });
@@ -200,20 +223,53 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
 
   const isValid =
     form.book.title.trim().length > 0 &&
+    form.book.title.trim().length <= INPUT_LIMITS.bookTitle &&
     form.book.author.trim().length > 0 &&
+    form.book.author.trim().length <= INPUT_LIMITS.author &&
+    form.book.description.trim().length <= INPUT_LIMITS.description &&
     form.book.cover.trim().length > 0 &&
+    form.chapters.length >= 1 &&
     form.chapters.every(
-      (c) => c.title.trim().length > 0 && c.content.trim().length > 0
+      (c) =>
+        c.title.trim().length > 0 &&
+        c.title.trim().length <= INPUT_LIMITS.chapterTitle &&
+        c.content.trim().length > 0 &&
+        c.content.trim().length <= INPUT_LIMITS.chapterContent &&
+        (c.isFree || (c.price !== undefined && c.price >= 0)) &&
+        (c.discount === undefined || (Number.isInteger(c.discount) && c.discount >= 0 && c.discount <= 999)) &&
+        c.images.every((img) => img.caption.trim().length <= INPUT_LIMITS.caption)
     );
+
+  const handleDelete = () => {
+    if (!initialData) return;
+    const bookId = initialData.book.id;
+
+    // Remove book and its chapters
+    const existingBooks = getBooks();
+    const existingChapters = getChapters();
+    
+    const updatedBooks = existingBooks.filter((b) => b.id !== bookId);
+    const updatedChapters = existingChapters.filter((c) => c.bookId !== bookId);
+    
+    saveBooks(updatedBooks);
+    saveChapters(updatedChapters);
+    
+    console.log("Deleted Book:", bookId);
+    
+    router.push("/");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
 
+    let createdBook: Book | undefined;
+    let createdChapters: Chapter[] | undefined;
+
     if (mode === "create") {
       const bookId = `${slugify(form.book.title)}-${Date.now()}`;
 
-      const newBook: Book = {
+      createdBook = {
         id: bookId,
         title: form.book.title.trim(),
         description: form.book.description.trim(),
@@ -221,13 +277,16 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         author: form.book.author.trim(),
       };
 
-      const newChapters: Chapter[] = form.chapters.map((c, i) => ({
+      createdChapters = form.chapters.map((c, i) => ({
         id: `${bookId}-${i + 1}`,
         bookId,
         title: c.title.trim(),
         slug: slugify(c.title) || `chapter-${i + 1}`,
         content: c.content.trim(),
         isFree: i === 0 ? true : c.isFree,
+        price: c.isFree ? undefined : c.price,
+        discount: c.isFree ? undefined : c.discount,
+        finalPrice: c.isFree ? undefined : (c.price !== undefined ? calculateFinalPrice(c.price, c.discount || 0) : undefined),
         images: c.images.length > 0 
           ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
           : undefined,
@@ -236,15 +295,15 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       const existingBooks = getBooks();
       const existingChapters = getChapters();
       
-      saveBooks([...existingBooks, newBook]);
-      saveChapters([...existingChapters, ...newChapters]);
+      saveBooks([...existingBooks, createdBook!]);
+      saveChapters([...existingChapters, ...createdChapters!]);
       
-      console.log("Created Book:", newBook);
-      console.log("Created Chapters:", newChapters);
+      console.log("Created Book:", createdBook);
+      console.log("Created Chapters:", createdChapters);
     } else if (mode === "edit" && initialData) {
       const bookId = initialData.book.id;
 
-      const updatedBook: Book = {
+      createdBook = {
         ...initialData.book,
         title: form.book.title.trim(),
         description: form.book.description.trim(),
@@ -252,13 +311,16 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         author: form.book.author.trim(),
       };
 
-      const updatedChapters: Chapter[] = form.chapters.map((c, i) => ({
+      createdChapters = form.chapters.map((c, i) => ({
         id: `${bookId}-${i + 1}`,
         bookId,
         title: c.title.trim(),
         slug: slugify(c.title) || `chapter-${i + 1}`,
         content: c.content.trim(),
         isFree: i === 0 ? true : c.isFree,
+        price: c.isFree ? undefined : c.price,
+        discount: c.isFree ? undefined : c.discount,
+        finalPrice: c.isFree ? undefined : (c.price !== undefined ? calculateFinalPrice(c.price, c.discount || 0) : undefined),
         images: c.images.length > 0 
           ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
           : undefined,
@@ -269,25 +331,28 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       
       // Update book
       const updatedBooks = existingBooks.map((b) => 
-        b.id === bookId ? updatedBook : b
+        b.id === bookId ? createdBook! : b
       );
       
       // Replace chapters for this book
       const filteredChapters = existingChapters.filter((c) => c.bookId !== bookId);
       
       saveBooks(updatedBooks);
-      saveChapters([...filteredChapters, ...updatedChapters]);
+      saveChapters([...filteredChapters, ...createdChapters!]);
       
-      console.log("Updated Book:", updatedBook);
-      console.log("Updated Chapters:", updatedChapters);
+      console.log("Updated Book:", createdBook);
+      console.log("Updated Chapters:", createdChapters);
     }
 
     onSubmit?.();
     
     if (mode === "create") {
       setForm(createInitialState());
+      const bookSlug = createdBook?.id;
+      router.push(`/book/${bookSlug}`);
     } else {
-      router.push("/dashboard/books");
+      const bookSlug = createdBook?.id;
+      router.push(`/book/${bookSlug}`);
     }
   };
 
@@ -301,13 +366,14 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
 
         <div>
           <label htmlFor="book-title" className="block text-sm text-text-secondary mb-1">
-            Title *
+            Title * <span className="text-text-tertiary">({form.book.title.length}/{INPUT_LIMITS.bookTitle})</span>
           </label>
           <input
             id="book-title"
             type="text"
             value={form.book.title}
             onChange={(e) => updateBook("title", e.target.value)}
+            maxLength={INPUT_LIMITS.bookTitle}
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
             placeholder="Book title"
           />
@@ -315,13 +381,14 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
 
         <div>
           <label htmlFor="book-author" className="block text-sm text-text-secondary mb-1">
-            Author *
+            Author * <span className="text-text-tertiary">({form.book.author.length}/{INPUT_LIMITS.author})</span>
           </label>
           <input
             id="book-author"
             type="text"
             value={form.book.author}
             onChange={(e) => updateBook("author", e.target.value)}
+            maxLength={INPUT_LIMITS.author}
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
             placeholder="Author name"
           />
@@ -329,12 +396,13 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
 
         <div>
           <label htmlFor="book-description" className="block text-sm text-text-secondary mb-1">
-            Description
+            Description <span className="text-text-tertiary">({form.book.description.length}/{INPUT_LIMITS.description})</span>
           </label>
           <textarea
             id="book-description"
             value={form.book.description}
             onChange={(e) => updateBook("description", e.target.value)}
+            maxLength={INPUT_LIMITS.description}
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-20"
             placeholder="Book description"
           />
@@ -364,11 +432,11 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
             <label className="block w-full px-3 py-3 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden"
                 onChange={(e) => handleBookCover(e.target.files)}
               />
-              + Upload cover image
+              + Upload cover image (PNG, JPEG, WebP)
             </label>
           )}
         </div>
@@ -397,9 +465,12 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   <button
                     type="button"
                     onClick={() => removeChapter(index)}
-                    className="text-xs text-text-tertiary hover:text-accent-primary transition"
+                    className="flex items-center gap-1 text-xs text-text-tertiary hover:text-accent-primary transition"
                   >
-                    Remove Chapter
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span className="hidden md:inline ml-2">Remove</span>
                   </button>
                 )}
               </div>
@@ -419,6 +490,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   onChange={(e) =>
                     updateChapter(index, "title", e.target.value)
                   }
+                  maxLength={INPUT_LIMITS.chapterTitle}
                   className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
                   placeholder="Chapter title"
                 />
@@ -437,6 +509,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   onChange={(e) =>
                     updateChapter(index, "content", e.target.value)
                   }
+                  maxLength={INPUT_LIMITS.chapterContent}
                   className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-25"
                   placeholder="Chapter content"
                 />
@@ -465,6 +538,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                           type="text"
                           value={img.caption}
                           onChange={(e) => updateChapterImageCaption(index, i, e.target.value)}
+                          maxLength={INPUT_LIMITS.caption}
                           placeholder="Enter caption..."
                           className="w-full px-2 py-1 text-xs bg-bg-primary border border-border rounded text-text-primary outline-none focus:border-accent-primary transition"
                         />
@@ -476,7 +550,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   <label className="block w-full px-3 py-2 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/webp"
                       multiple
                       className="hidden"
                       onChange={(e) => handleChapterImages(index, e.target.files)}
@@ -501,6 +575,66 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   </span>
                 </label>
               )}
+
+              {!chapter.isFree && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">
+                      Price (USD) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={chapter.price ?? ""}
+                      onChange={(e) =>
+                        updateChapter(index, "price", e.target.value)
+                      }
+                      className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">
+                      Discount (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="999"
+                      step="1"
+                      value={chapter.discount ?? ""}
+                      onChange={(e) =>
+                        updateChapter(index, "discount", e.target.value)
+                      }
+                      className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!chapter.isFree && chapter.price !== undefined && (
+                <div className="p-3 bg-bg-secondary rounded-lg border border-border">
+                  <p className="text-sm text-text-secondary">
+                    Final Price:{" "}
+                    <span className="font-semibold text-accent-primary">
+                      ${calculateFinalPrice(chapter.price, chapter.discount || 0).toFixed(2)}
+                    </span>
+                    {chapter.discount && chapter.discount > 0 && (
+                      <>
+                        {" "}
+                        <span className="text-text-tertiary line-through">
+                          ${chapter.price.toFixed(2)}
+                        </span>
+                        <span className="ml-2 text-text-tertiary">
+                          -{chapter.discount}%
+                        </span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -515,13 +649,35 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         </button>
       </div>
 
-      <button
-        type="submit"
-        disabled={!isValid}
-        className="w-full px-4 py-2 rounded-lg btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {mode === "edit" ? "Save Changes" : "Create Book"}
-      </button>
+      <div className="flex gap-3">
+        {mode === "edit" && (
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-primary border border-accent-primary rounded-lg hover:bg-accent-primary hover:text-white transition"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={!isValid}
+          className="flex-1 px-4 py-2 rounded-lg btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {mode === "edit" ? "Save Changes" : "Create Book"}
+        </button>
+      </div>
+
+      <ConfirmModal
+        isOpen={isModalOpen}
+        title="Delete Book"
+        description="This action cannot be undone. Are you sure you want to delete this book and all its chapters?"
+        onConfirm={handleDelete}
+        onCancel={() => setIsModalOpen(false)}
+      />
     </form>
   );
 }

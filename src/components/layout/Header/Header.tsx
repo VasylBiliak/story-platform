@@ -21,6 +21,7 @@ const Header = () => {
   const navItems = [
     { label: 'Library', href: '/#books' },
     { label: 'About', href: '/about' },
+    { label: 'FAQ', href: '/faq' },
     { label: 'Create Book', href: '/dashboard/books' },
   ];
 

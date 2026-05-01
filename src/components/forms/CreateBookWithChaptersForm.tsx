@@ -29,7 +29,9 @@ type FormState = {
   book: {
     title: string;
     description: string;
+    cover: string;
     author: string;
+    images: string[];
   };
   chapters: ChapterInput[];
 };
@@ -40,6 +42,7 @@ const INITIAL_STATE: FormState = {
     description: "",
     cover: "",
     author: "",
+    images: [],
   },
   chapters: [{ title: "", content: "", isFree: true, images: [] }],
 };
