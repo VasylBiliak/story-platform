@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter, ChapterImage } from "@/lib/types";
 import { getBooks, saveBooks, getChapters, saveChapters } from "@/lib/storage";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
-import { ConfirmModal } from "@/components/ui/ConfirmModal/ConfirmModal";
+import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export type BookFormMode = "create" | "edit";
@@ -156,20 +156,6 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       ...prev,
       chapters: prev.chapters.filter((_, i) => i !== index),
     }));
-  };
-
-  const handleBookCover = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    try {
-      const base64 = await fileToBase64(file);
-      setForm((prev) => ({
-        ...prev,
-        book: { ...prev.book, cover: base64 },
-      }));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to process image");
-    }
   };
 
   const removeBookCover = () => {
@@ -361,34 +347,25 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
           {mode === "edit" ? "Edit Book Details" : "Book Details"}
         </h3>
 
-        <div>
-          <label htmlFor="book-title" className="block text-sm text-text-secondary mb-1">
-            Title * <span className="text-text-tertiary">({form.book.title.length}/{INPUT_LIMITS.bookTitle})</span>
-          </label>
-          <input
-            id="book-title"
-            type="text"
-            value={form.book.title}
-            onChange={(e) => updateBook("title", e.target.value)}
-            maxLength={INPUT_LIMITS.bookTitle}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
-            placeholder="Book title"
-          />
-        </div>
+        <Input
+          label="Title"
+          value={form.book.title}
+          onChange={(e) => updateBook("title", e.target.value)}
+          maxLength={INPUT_LIMITS.bookTitle}
+          showCharacterCount
+          placeholder="Book title"
+          required
+        />
 
-        <div>
-          <label htmlFor="book-description" className="block text-sm text-text-secondary mb-1">
-            Description <span className="text-text-tertiary">({form.book.description.length}/{INPUT_LIMITS.description})</span>
-          </label>
-          <textarea
-            id="book-description"
-            value={form.book.description}
-            onChange={(e) => updateBook("description", e.target.value)}
-            maxLength={INPUT_LIMITS.description}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-20"
-            placeholder="Book description"
-          />
-        </div>
+        <Textarea
+          label="Description"
+          value={form.book.description}
+          onChange={(e) => updateBook("description", e.target.value)}
+          maxLength={INPUT_LIMITS.description}
+          showCharacterCount
+          placeholder="Book description"
+          rows={4}
+        />
 
         <div>
           <label className="block text-sm text-text-secondary mb-1">
@@ -411,15 +388,10 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
               </button>
             </div>
           ) : (
-            <label className="block w-full px-3 py-3 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => handleBookCover(e.target.files)}
-              />
-              + Upload cover image (PNG, JPEG, WebP)
-            </label>
+            <FileInput
+              onFileSelect={(base64) => setForm((prev) => ({ ...prev, book: { ...prev.book, cover: base64 } }))}
+              placeholder="+ Upload cover image (PNG, JPEG, WebP)"
+            />
           )}
         </div>
       </div>
@@ -621,36 +593,38 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
           ))}
         </AnimatePresence>
 
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={addChapter}
           disabled={form.chapters.length >= 5}
-          className="w-full px-4 py-2 border border-border rounded-lg text-text-secondary hover:text-text-primary hover:border-accent-primary transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full"
         >
           + Add Chapter
-        </button>
+        </Button>
       </div>
 
       <div className="flex gap-3">
         {mode === "edit" && (
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-primary border border-accent-primary rounded-lg hover:bg-accent-primary hover:text-white transition"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             Delete
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={!isValid}
-          className="flex-1 px-4 py-2 rounded-lg btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1"
         >
           {mode === "edit" ? "Save Changes" : "Create Book"}
-        </button>
+        </Button>
       </div>
 
       <ConfirmModal

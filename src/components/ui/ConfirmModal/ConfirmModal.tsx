@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "../Button/Button";
+
 interface Props {
   isOpen: boolean;
   title: string;
@@ -26,18 +28,20 @@ export function ConfirmModal({ isOpen, title, description, onConfirm, onCancel, 
         <p className="text-text-secondary mb-6">{description}</p>
 
         <div className="flex gap-3 justify-end">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary border border-border rounded-lg hover:border-border-hover transition"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={onConfirm}
-            className="px-4 py-2 text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary-hover rounded-lg transition"
           >
             {confirmButtonText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -3,23 +3,12 @@
  * Removes HTML tags and dangerous characters to prevent XSS
  */
 
-export const INPUT_LIMITS = {
-  bookTitle: 100,
-  author: 60,
-  description: 500,
-  chapterTitle: 120,
-  chapterContent: 5000,
-  caption: 200,
-} as const;
+import { INPUT_LIMITS, IMAGE_CONSTRAINTS } from "./constants";
 
-export const ALLOWED_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-] as const;
-
-export const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+// Re-export for backward compatibility
+export { INPUT_LIMITS };
+export const ALLOWED_IMAGE_TYPES = IMAGE_CONSTRAINTS.allowedTypes;
+export const MAX_IMAGE_SIZE = IMAGE_CONSTRAINTS.maxSize;
 
 /**
  * Sanitize text input by removing HTML tags and dangerous characters
@@ -42,7 +31,7 @@ export function validateLength(value: string, maxLength: number): boolean {
  * Validate image file type
  */
 export function isValidImageType(file: File): boolean {
-  return ALLOWED_IMAGE_TYPES.includes(file.type as typeof ALLOWED_IMAGE_TYPES[number]);
+  return IMAGE_CONSTRAINTS.allowedTypes.includes(file.type as typeof IMAGE_CONSTRAINTS.allowedTypes[number]);
 }
 
 /**
@@ -56,11 +45,17 @@ export function isValidImageSize(file: File): boolean {
  * Validate image file (type and size)
  */
 export function validateImage(file: File): { valid: boolean; error?: string } {
-  if (!isValidImageType(file)) {
-    return { valid: false, error: `Invalid file type. Allowed: PNG, JPEG, WebP` };
+  if (!IMAGE_CONSTRAINTS.allowedTypes.includes(file.type as typeof IMAGE_CONSTRAINTS.allowedTypes[number])) {
+    return {
+      valid: false,
+      error: `Invalid file type. Allowed: ${IMAGE_CONSTRAINTS.allowedTypes.map(t => t.replace("image/", "").toUpperCase()).join(", ")}`,
+    };
   }
-  if (!isValidImageSize(file)) {
-    return { valid: false, error: `File too large. Maximum size: 2MB` };
+  if (file.size > IMAGE_CONSTRAINTS.maxSize) {
+    return {
+      valid: false,
+      error: `File too large. Maximum size: ${IMAGE_CONSTRAINTS.maxSizeDisplay}`,
+    };
   }
   return { valid: true };
 }

@@ -1,9 +1,10 @@
 import { Book, Chapter, ChapterImage } from '@/lib/types';
 import { books as mockBooks } from '@/data/books';
 import { chapters as mockChapters } from '@/data/chapters';
+import { STORAGE_KEYS } from './constants';
 
-const BOOKS_KEY = 'books';
-const CHAPTERS_KEY = 'chapters';
+const BOOKS_KEY = STORAGE_KEYS.books;
+const CHAPTERS_KEY = STORAGE_KEYS.chapters;
 
 function safeParse<T>(json: string | null, fallback: T): T {
   if (!json) return fallback;

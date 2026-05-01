@@ -1,9 +1,11 @@
+import { STORAGE_KEYS } from "./constants";
+
 export type User = {
   name: string;
   email: string;
 };
 
-const STORAGE_KEY = "story-platform-user";
+const STORAGE_KEY = STORAGE_KEYS.user;
 
 export function getStoredUser(): User | null {
   if (typeof window === "undefined") return null;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ConfirmModal } from "@/components/ui/ConfirmModal/ConfirmModal";
+import { Button, Input, ConfirmModal } from "@/components/ui";
 
 export default function ProfilePage() {
   const { user, logout, isLoading } = useAuth();
@@ -102,64 +102,39 @@ export default function ProfilePage() {
           )}
 
           <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div>
-              <label
-                htmlFor="currentPassword"
-                className="block text-sm font-medium text-text-secondary mb-2"
-              >
-                Current Password
-              </label>
-              <input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-bg-primary border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary transition-colors"
-                placeholder="Enter current password"
-              />
-            </div>
+            <Input
+              label="Current Password"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Enter current password"
+            />
 
-            <div>
-              <label
-                htmlFor="newPassword"
-                className="block text-sm font-medium text-text-secondary mb-2"
-              >
-                New Password
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-bg-primary border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary transition-colors"
-                placeholder="Enter new password"
-              />
-            </div>
+            <Input
+              label="New Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+            />
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-text-secondary mb-2"
-              >
-                Confirm New Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-bg-primary border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary transition-colors"
-                placeholder="Confirm new password"
-              />
-            </div>
+            <Input
+              label="Confirm New Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="lg"
               disabled={!currentPassword || !newPassword || !confirmPassword}
-              className="w-full py-3 px-4 bg-accent-primary text-bg-primary font-semibold rounded-lg hover:bg-accent-primary-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full"
             >
               Update Password
-            </button>
+            </Button>
           </form>
         </div>
 
@@ -168,12 +143,14 @@ export default function ProfilePage() {
           <h2 className="text-xl font-semibold text-text-primary mb-4">
             Session
           </h2>
-          <button
+          <Button
+            variant="outline"
+            size="lg"
             onClick={() => setShowLogoutModal(true)}
-            className="w-full py-3 px-4 border border-accent-primary text-accent-primary font-semibold rounded-lg hover:bg-accent-primary hover:text-bg-primary transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+            className="w-full"
           >
             Log out
-          </button>
+          </Button>
         </div>
       </div>
 
