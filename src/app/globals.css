@@ -7,11 +7,11 @@
  */
 
 @theme {
---golden: #DAC165;
---color-bg-primary: #0D0D0D;
---gradient-primary: linear-gradient(180deg,
-rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%, 
-rgb(0, 13, 17) 60%, rgb(3, 3, 40) 100%);
+    --golden: #DAC165;
+    --color-bg-primary: #0D0D0D;
+    --gradient-primary: linear-gradient(180deg,
+    rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%, 
+    rgb(0, 13, 17) 60%, rgb(3, 3, 40) 100%);
   /* background: var(--gradient-primary); */
     --color-bg-secondary: #1F1F1F;
 
@@ -337,4 +337,16 @@ rgb(0, 13, 17) 60%, rgb(3, 3, 40) 100%);
     background-color: var(--color-accent-primary);
     color: var(--color-text-primary);
 }
+/* globals.css або ваш файл стилів */
+
+
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important; 
+    -webkit-text-fill-color: var(--color-text-primary) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }

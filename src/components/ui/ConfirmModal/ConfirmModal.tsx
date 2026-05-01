@@ -6,9 +6,10 @@ interface Props {
   description: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmButtonText?: string;
 }
 
-export function ConfirmModal({ isOpen, title, description, onConfirm, onCancel }: Props) {
+export function ConfirmModal({ isOpen, title, description, onConfirm, onCancel, confirmButtonText = "Confirm" }: Props) {
   if (!isOpen) return null;
 
   return (
@@ -35,7 +36,7 @@ export function ConfirmModal({ isOpen, title, description, onConfirm, onCancel }
             onClick={onConfirm}
             className="px-4 py-2 text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary-hover rounded-lg transition"
           >
-            Confirm Delete
+            {confirmButtonText}
           </button>
         </div>
       </div>

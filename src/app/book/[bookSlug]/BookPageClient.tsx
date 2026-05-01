@@ -9,6 +9,8 @@ import { getBooks as getLocalBooks, getChapters as getLocalChapters } from "@/li
 import { getBooks as getStaticBooks, getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
 import { getChaptersByBookSorted as getStaticChaptersByBook } from "@/lib/api/chapters";
 import { ChapterListItem } from "@/components/chapter/ChapterListItem";
+import { useAuth } from '@/components/auth/AuthProvider';
+
 
 function isLocalBook(bookId: string, localBooks: Book[]): boolean {
   return localBooks.some((b) => b.id === bookId);
@@ -17,6 +19,7 @@ function isLocalBook(bookId: string, localBooks: Book[]): boolean {
 export default function BookPageClient() {
   const params = useParams();
   const bookSlug = params.bookSlug as string;
+  const { user, isLoading } = useAuth();
 
   const [book, setBook] = useState<Book | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -99,25 +102,27 @@ export default function BookPageClient() {
       {/* Book Header */}
       <div className="rounded-2xl shadow-sm border border-border overflow-hidden mb-12">
         <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 p-8">
-    
-    {/* Edit */}
-    {isLocalBook(book.id, getLocalBooks()) && (
-      <Link
-        href={`/dashboard/books/edit/${book.id}`}
-        className="absolute top-1 right-1 md:top-8 md:right-8 
-        inline-flex items-center justify-center p-2 
-        md:px-4 md:py-2 border 
-        border-accent-primary text-accent-primary 
-        rounded-lg hover:bg-accent-primary hover:text-white 
-        transition-colors z-10"
-        title="Edit Book"
-      >
-        <svg className="w-4 h-4 md:w-3 md:h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-        <span className="hidden md:inline ml-2">Edit</span>
-      </Link>
-    )}          
+
+          {/* Edit */}
+
+          {user && user.name === book.author && isLocalBook(book.id, getLocalBooks()) && (
+            <Link
+              href={`/dashboard/books/edit/${book.id}`}
+              className="absolute top-4 right-4 md:top-8 md:right-8 
+    inline-flex items-center justify-center p-2 
+    md:px-4 md:py-2 border 
+    border-accent-primary text-accent-primary 
+    rounded-lg hover:bg-accent-primary hover:text-white 
+    transition-colors z-10 bg-bg-primary"
+              title="Edit Book"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span className="hidden md:inline ml-2 font-medium">Edit</span>
+            </Link>
+          )}
+
           <div className="relative aspect-[2/3] w-full max-w-xs mx-auto md:mx-0 rounded-lg overflow-hidden shadow-lg">
             <Image
               src={book.cover}

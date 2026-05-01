@@ -7,6 +7,7 @@ import { Book, Chapter, ChapterImage } from "@/lib/types";
 import { getBooks, saveBooks, getChapters, saveChapters } from "@/lib/storage";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
 import { ConfirmModal } from "@/components/ui/ConfirmModal/ConfirmModal";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export type BookFormMode = "create" | "edit";
 
@@ -42,7 +43,6 @@ type FormState = {
     title: string;
     description: string;
     cover: string;
-    author: string;
   };
   chapters: ChapterInput[];
 };
@@ -54,7 +54,6 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
         title: book.title,
         description: book.description,
         cover: book.cover,
-        author: book.author,
       },
       chapters: chapters.map((c) => ({
         title: c.title,
@@ -71,7 +70,6 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
       title: "",
       description: "",
       cover: "",
-      author: "",
     },
     chapters: [{ title: "", content: "", isFree: true, images: [] }],
   };
@@ -98,6 +96,7 @@ function calculateFinalPrice(price: number, discount: number = 0): number {
 
 export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [form, setForm] = useState<FormState>(() => 
     createInitialState(initialData?.book, initialData?.chapters)
   );
@@ -224,8 +223,6 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const isValid =
     form.book.title.trim().length > 0 &&
     form.book.title.trim().length <= INPUT_LIMITS.bookTitle &&
-    form.book.author.trim().length > 0 &&
-    form.book.author.trim().length <= INPUT_LIMITS.author &&
     form.book.description.trim().length <= INPUT_LIMITS.description &&
     form.book.cover.trim().length > 0 &&
     form.chapters.length >= 1 &&
@@ -274,7 +271,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         title: form.book.title.trim(),
         description: form.book.description.trim(),
         cover: form.book.cover.trim(),
-        author: form.book.author.trim(),
+        author: user?.name || "Unknown Author",
       };
 
       createdChapters = form.chapters.map((c, i) => ({
@@ -308,7 +305,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         title: form.book.title.trim(),
         description: form.book.description.trim(),
         cover: form.book.cover.trim(),
-        author: form.book.author.trim(),
+        author: user?.name || initialData.book.author,
       };
 
       createdChapters = form.chapters.map((c, i) => ({
@@ -376,21 +373,6 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
             maxLength={INPUT_LIMITS.bookTitle}
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
             placeholder="Book title"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="book-author" className="block text-sm text-text-secondary mb-1">
-            Author * <span className="text-text-tertiary">({form.book.author.length}/{INPUT_LIMITS.author})</span>
-          </label>
-          <input
-            id="book-author"
-            type="text"
-            value={form.book.author}
-            onChange={(e) => updateBook("author", e.target.value)}
-            maxLength={INPUT_LIMITS.author}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
-            placeholder="Author name"
           />
         </div>
 
@@ -677,6 +659,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         description="This action cannot be undone. Are you sure you want to delete this book and all its chapters?"
         onConfirm={handleDelete}
         onCancel={() => setIsModalOpen(false)}
+        confirmButtonText="Delete"
       />
     </form>
   );
