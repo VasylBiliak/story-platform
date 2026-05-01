@@ -1,13 +1,11 @@
 "use client";
 
 import React from 'react';
+import { scrollToWithOffset } from '@/lib/scroll';
 
 const Hero = () => {
   const scrollToBooks = () => {
-    const element = document.getElementById('books');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToWithOffset('books');
   };
 
   return (
@@ -23,7 +21,7 @@ const Hero = () => {
 
         <button
           type="button"
-          className="group relative text-lg cursor-pointer overflow-hidden border-2 border-text-primary px-8 py-4 tracking-[0.15em] text-text-primary transition-all hover:bg-text-primary hover:text-bg-primary active:scale-95"
+          className="group relative text-lg cursor-pointer overflow-hidden border-2 border-accent-primary px-8 py-4 tracking-[0.15em] text-accent-primary transition-all duration-200 hover:bg-accent-primary hover:text-bg-primary active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
           onClick={scrollToBooks}
         >
           Explore Library

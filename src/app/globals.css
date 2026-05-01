@@ -1,13 +1,17 @@
 @import "tailwindcss";
 
+/*
+ * All colors must be defined here
+ * Do not use hardcoded colors in components
+ * Use only CSS variables and Tailwind tokens
+ */
+
 @theme {
 --golden: #DAC165;
-    --color-bg-primary: #0D0D0D;
-     --gradient-primary: linear-gradient(
-    180deg,
-rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%,
- rgb(0, 13, 17) 60%, rgb(3, 3, 40) 100%
-  );
+--color-bg-primary: #0D0D0D;
+--gradient-primary: linear-gradient(180deg,
+rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%, 
+rgb(0, 13, 17) 60%, rgb(3, 3, 40) 100%);
   /* background: var(--gradient-primary); */
     --color-bg-secondary: #1F1F1F;
 
@@ -21,10 +25,24 @@ rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%,
     --color-border-hover: #3A3A3A;
 
     /* Colors - Accents */
-    --color-accent-primary: #ee144b;
+    --color-accent-primary: #2f7cee;
     --color-accent-primary-hover: #E6003E;
     --color-accent-secondary: #2C7A4B;
     --color-accent-tertiary: #DAC165;
+
+    /* Colors - Status */
+    --color-success: #22c55e;
+    --color-success-bg: #064e3b;
+    --color-success-hover: #16a34a;
+    --color-error: #ef4444;
+    --color-error-bg: #7f1d1d;
+    --color-error-hover: #dc2626;
+    --color-warning: #f59e0b;
+    --color-warning-bg: #78350f;
+    --color-warning-hover: #d97706;
+    --color-info: #3b82f6;
+    --color-info-bg: #1e3a8a;
+    --color-info-hover: #2563eb;
 
     /* Colors - Dark theme (legacy) */
     --color-dark-bg: #0D0D0D;
@@ -85,6 +103,11 @@ rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%,
     backdrop-filter: blur(40px);
   }
 
+  /* Smooth scroll offset for fixed header */
+  #books,
+  [id^="section-"] {
+    scroll-margin-top: 80px;
+  }
 
   footer {
     /* background: transparent; */
@@ -225,7 +248,7 @@ rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%,
 
   .btn-primary:hover {
     background: var(--color-accent-primary-hover);
-    box-shadow: 0 0 20px rgba(192, 57, 43, 0.4);
+    box-shadow: 0 0 20px rgba(238, 20, 75, 0.4);
   }
 
   .btn-outline {
@@ -305,12 +328,12 @@ rgba(0, 0, 22, 0.984) 0%, rgb(1, 17, 27) 42%,
   }
 
 ::selection {
-    background-color: var(--color-green-dark);
-    color: var(--text-primary);
+    background-color: var(--color-accent-primary);
+    color: var(--color-text-primary);
 }
 
 ::-moz-selection {
-    background-color: var(--color-green-dark);
-    color: var(--text-primary);
+    background-color: var(--color-accent-primary);
+    color: var(--color-text-primary);
 }
 }

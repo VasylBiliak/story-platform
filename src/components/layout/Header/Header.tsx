@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { scrollToWithOffset } from '@/lib/scroll';
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
@@ -22,19 +24,52 @@ const Header = () => {
     { label: 'Library', href: '/#books' },
     { label: 'About', href: '/about' },
     { label: 'FAQ', href: '/faq' },
-    { label: 'Create Book', href: '/dashboard/books' },
+    { label: 'Create', href: '/dashboard/books' },
   ];
 
   const handleNavigate = (href: string) => {
-    router.push(href);
+    // Handle hash navigation for same-page scrolling
+    if (href.startsWith('/#')) {
+      const id = href.replace('/#', '');
+      scrollToWithOffset(id);
+    } else {
+      router.push(href);
+    }
     closeMobileMenu();
   };
 
   const baseDesktopBtn =
-    'relative font-[Oswald] text-xs font-semibold uppercase tracking-[2px] bg-transparent py-2 cursor-pointer text-text-primary transition-colors duration-300 hover:text-accent-primary after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-accent-primary after:transition-all after:duration-300 hover:after:w-full';
+    'relative font-[Oswald] text-xs font-semibold uppercase tracking-[2px] bg-transparent py-2 cursor-pointer transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary';
 
   const baseMobileBtn =
-    'relative font-[Oswald] text-[28px] font-semibold uppercase tracking-[2px] text-text-primary bg-transparent py-2 cursor-pointer transition-all duration-300 hover:text-accent-primary hover:scale-105 after:absolute after:left-1/2 after:-translate-x-1/2 after:-bottom-1 after:h-[2px] after:w-0 after:bg-accent-primary after:transition-all after:duration-300 hover:after:w-full';
+    'relative font-[Oswald] text-[28px] font-semibold uppercase tracking-[2px] bg-transparent py-2 cursor-pointer transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary';
+
+  const NavLink = ({ href, children, isMobile = false }: { href: string; children: React.ReactNode; isMobile?: boolean }) => {
+    const isActive = pathname === href || pathname.startsWith(href);
+    const baseClasses = isMobile ? baseMobileBtn : baseDesktopBtn;
+    
+    return (
+      <motion.button
+        onClick={() => handleNavigate(href)}
+        className={`${baseClasses} ${isActive ? 'text-accent-primary' : 'text-text-primary hover:text-accent-primary'} ${!isMobile ? 'hover:scale-105' : ''}`}
+        whileHover={!isMobile ? { y: -1 } : undefined}
+        transition={{ duration: 0.15 }}
+      >
+        <motion.span className="relative inline-block">
+          {children}
+          {isActive && (
+            <motion.div
+              layoutId="nav-underline"
+              className={`absolute ${isMobile ? 'left-1/2 -translate-x-1/2' : 'left-0'} -bottom-1 h-[2px] w-full bg-accent-primary`}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              transition={{ duration: 0.3 }}
+            />
+          )}
+        </motion.span>
+      </motion.button>
+    );
+  };
 
   return (
     <>
@@ -49,21 +84,17 @@ const Header = () => {
             onClick={() => router.push('/')}
             className="font-[Oswald] text-xl font-bold tracking-[3px] uppercase bg-transparent transition-all duration-300 hover:scale-105 hover:text-accent-primary"
           >
-            Story<span>Platform</span>
+            Story<span className="text-accent-primary hover:text-2xl">Platform</span>
           </button>
 
           <div className="flex items-center">
-            <div className="hidden md:flex items-center gap-6 md:gap-8 lg:gap-12">
+            <nav className="hidden md:flex items-center gap-6 md:gap-8 lg:gap-12" aria-label="Main navigation">
               {navItems.map(item => (
-                <button
-                  key={item.label}
-                  onClick={() => handleNavigate(item.href)}
-                  className={baseDesktopBtn}
-                >
+                <NavLink key={item.label} href={item.href}>
                   {item.label}
-                </button>
+                </NavLink>
               ))}
-            </div>
+            </nav>
 
             <button
               onClick={toggleMobileMenu}
@@ -94,18 +125,18 @@ const Header = () => {
               ✕
             </button>
 
-            <nav className="flex flex-col justify-center items-center gap-4 w-full h-full text-center">
+            <nav className="flex flex-col justify-center items-center gap-4 w-full h-full text-center" aria-label="Mobile navigation">
               {navItems.map((item, index) => (
-                <motion.button
+                <motion.div
                   key={item.label}
-                  onClick={() => handleNavigate(item.href)}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 + index * 0.05, ease: 'easeOut' }}
-                  className={baseMobileBtn}
                 >
-                  {item.label}
-                </motion.button>
+                  <NavLink href={item.href} isMobile={true}>
+                    {item.label}
+                  </NavLink>
+                </motion.div>
               ))}
             </nav>
           </motion.div>

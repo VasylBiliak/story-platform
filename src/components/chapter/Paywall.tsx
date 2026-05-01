@@ -2,7 +2,7 @@
 
 import { Chapter } from '@/lib/types';
 import { LockIcon } from '@/components/ui/LockIcon';
-
+import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
 interface PaywallProps {
   chapter: Chapter;
 }
@@ -58,15 +58,16 @@ export function Paywall({ chapter }: PaywallProps) {
           </p>
           <button
             onClick={handlePurchase}
-            className="w-full sm:w-auto inline-flex items-center 
-            justify-center px-8 py-3 bg-status-warning text-accent-primary 
-            font-semibold rounded-lg hover:bg-status-warning/80 
-            transition-colors focus:outline-none focus:ring-2 
-            focus:ring-status-warning focus:ring-offset-2"
+            className=" items-center justify-center text-lg 
+                                cursor-pointer overflow-hidden border-2 border-accent-primary 
+                                px-8 py-4 tracking-[0.15em] text-yellow-500 transition-all 
+                                duration-200 
+                                hover:bg-yellow-500 hover:text-bg-primary active:scale-95 
+                                focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500"
           >
             Buy for ${(chapter.finalPrice || 0).toFixed(2)}
             {chapter.price && chapter.discount && chapter.discount > 0 && (
-              <span className="ml-2 text-sm line-through text-text-tertiary">
+              <span className="ml-2 text-sm line-through text-accent-primary">
                 ${chapter.price.toFixed(2)}
               </span>
             )}
