@@ -144,11 +144,16 @@ export default function BookPageClient() {
               {book.description}
             </p>
             <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-status-success-bg text-status-success">
+              <span className="inline-flex items-center px-3 py-1 
+              rounded-full text-sm font-medium 
+              bg-success-bg">
                 {freeChapters} Free Chapter{freeChapters !== 1 ? "s" : ""}
               </span>
               {paidChapters > 0 && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-status-warning-bg text-status-warning">
+                <span className="inline-flex items-center px-3 py-1 
+                rounded-full text-sm font-medium 
+                border-2 
+          border-accent-buy tracking-[0.15em] transition-all">
                   {paidChapters} Premium Chapter{paidChapters !== 1 ? "s" : ""}
                 </span>
               )}

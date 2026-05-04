@@ -202,7 +202,7 @@ export default function ChapterPageClient() {
                   }
                 </p>
 
-{                <Link
+                {<Link
                   href={chapter.isFree ? `/book/${book.id}` : "#"}
                   className={`inline-flex items-center justify-center px-8 py-3 font-medium rounded-lg transition-all transform hover:scale-105 ${chapter.isFree
                     ? "bg-status-success text-white hover:bg-status-success-hover"
@@ -222,7 +222,7 @@ export default function ChapterPageClient() {
                       <BookOpenIcon className="w-4 h-4 mr-2" />Read for Free
                     </button>
                   ) : (
-                                        <button
+                    <button
                       type="button"
                       className=" display flex items-center justify-center text-lg 
                       cursor-pointer overflow-hidden border-2 border-accent-primary 

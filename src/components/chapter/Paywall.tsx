@@ -41,13 +41,13 @@ export function Paywall({ chapter }: PaywallProps) {
           ))}
         </div>
         {/* Fade gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-bg-primary to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 " />
       </div>
 
       {/* Paywall CTA */}
-      <div className="px-8 pb-8">
-        <div className="bg-status-warning-bg border border-status-warning/30 rounded-xl p-6 text-center">
-          <div className="w-12 h-12 bg-status-warning/20 rounded-full flex items-center justify-center mx-auto mb-4">
+
+        <div className="rounded-xl p-6 text-center">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto">
             <LockIcon className="w-6 h-6 text-status-warning" />
           </div>
           <h3 className="text-lg font-bold mb-2">
@@ -76,7 +76,6 @@ export function Paywall({ chapter }: PaywallProps) {
           <p className="mt-4 text-xs text-text-tertiary">
             Secure payment powered by Stripe • Instant access after purchase
           </p>
-        </div>
       </div>
     </div>
   );

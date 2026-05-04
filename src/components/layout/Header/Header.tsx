@@ -103,35 +103,47 @@ const Header = () => {
             </nav>
 
             {/* Auth Section */}
-            {!isLoading && (
-              <div className="flex items-center gap-4">
-                {user ? (
-                  <>
-                    {/* Desktop: Show clickable username */}
-                    <button
-                      onClick={() => router.push("/profile")}
-                      className="hidden md:flex items-center gap-2 text-text-secondary hover:text-accent-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded px-2 py-1"
-                    >
-                      <span className="text-sm font-medium">{user.name}</span>
-                    </button>
-                    {/* Mobile: Show clickable avatar circle */}
-                    <button
-                      onClick={() => router.push("/profile")}
-                      className="md:hidden w-8 h-8 rounded-full bg-accent-primary flex items-center justify-center text-bg-primary font-bold text-sm hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                    >
-                      {user.name.charAt(0).toUpperCase()}
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => router.push("/auth/login")}
-                    className="text-xs font-semibold uppercase tracking-[2px] text-accent-primary border border-accent-primary px-4 py-2 rounded hover:bg-accent-primary hover:text-bg-primary transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                  >
-                    Login / Register
-                  </button>
-                )}
-              </div>
-            )}
+{!isLoading && (
+  <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+    {user ? (
+      <>
+        {/* Desktop / Tablet */}
+        <button
+          onClick={() => router.push("/profile")}
+          className="hidden sm:flex items-center gap-2 text-text-secondary hover:text-accent-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded px-2 py-1 max-w-[140px]"
+        >
+          <span className="text-sm font-medium truncate">
+            {user.name}
+          </span>
+        </button>
+
+        {/* Mobile Avatar */}
+        <button
+          onClick={() => router.push("/profile")}
+          className="flex sm:hidden w-8 h-8 rounded-full bg-accent-primary items-center justify-center text-bg-primary font-bold text-sm hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+        >
+          {user.name.charAt(0).toUpperCase()}
+        </button>
+      </>
+    ) : (
+      <button
+        onClick={() => router.push("/auth/login")}
+        className="
+          text-[10px] sm:text-xs font-semibold uppercase tracking-[2px]
+          text-accent-primary border border-accent-primary
+          px-2 sm:px-3 md:px-4 py-1.5 sm:py-2
+          rounded
+          hover:bg-accent-primary hover:text-bg-primary
+          transition-all duration-200
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary
+        "
+      >
+        <span className="hidden sm:inline">Login / Register</span>
+        <span className="sm:hidden">Login</span>
+      </button>
+    )}
+  </div>
+)}
 
             <button
               onClick={toggleMobileMenu}

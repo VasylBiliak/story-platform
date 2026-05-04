@@ -21,7 +21,11 @@ const Hero = () => {
 
         <button
           type="button"
-          className="group relative text-lg cursor-pointer overflow-hidden border-2 border-accent-primary px-8 py-4 tracking-[0.15em] text-accent-primary transition-all duration-200 hover:bg-accent-primary hover:text-bg-primary active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          className="group relative text-lg cursor-pointer overflow-hidden border-2 
+          border-accent-primary px-8 py-4 tracking-[0.15em] text-accent-primary 
+          transition-all duration-200 hover:bg-accent-primary hover:text-bg-primary 
+          active:scale-95 focus:outline-none focus-visible:ring-2 
+          focus-visible:ring-accent-primary"
           onClick={scrollToBooks}
         >
           Explore Library

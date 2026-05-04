@@ -13,7 +13,7 @@ export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
     <Link
       href={`/book/${bookSlug}/chapter/${chapter.slug}`}
       className="group flex items-center justify-between p-4 rounded-lg border border-border
-      transition-all duration-200 hover:border-border-hover hover:shadow-sm"
+      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm"
     >
       <div className="flex items-center gap-3">
         <div
