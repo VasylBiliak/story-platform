@@ -5,7 +5,6 @@ import "./globals.css";
 import Providers from "./providers";
 import Header from "@/components/layout/Header/Header";
 import Footer from "@/components/layout/Footer/Footer";
-import { AuthProvider } from "@/components/auth/AuthProvider";
 
 const marcellus = Marcellus({
   weight: "400",
@@ -44,13 +43,11 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-accent-primary text-text-primary">
         <Providers>
-          <AuthProvider>
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </AuthProvider>
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
         </Providers>
       </body>
     </html>

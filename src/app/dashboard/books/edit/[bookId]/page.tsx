@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Book, Chapter } from "@/lib/types";
-import { getBooks, getChapters } from "@/lib/storage";
+import { getBookById } from "@/lib/api/books";
+import { getChaptersByBookSorted } from "@/lib/api/chapters";
 import { BookForm } from "@/components/books/BookForm";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -25,30 +26,30 @@ export default function EditBookPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    // Don't load book data until auth is checked
     if (authLoading || !user) return;
 
-    const books = getBooks();
-    const foundBook = books.find((b) => b.id === bookId);
+    const currentUser = user;
 
-    if (!foundBook) {
-      router.push("/dashboard/books");
-      return;
+    async function loadBook() {
+      const foundBook = await getBookById(bookId);
+      if (!foundBook) {
+        router.push("/dashboard/books");
+        return;
+      }
+
+      if (foundBook.author !== currentUser.name) {
+        console.log("Access denied: Not the book author");
+        router.push("/dashboard/books");
+        return;
+      }
+
+      const bookChapters = await getChaptersByBookSorted(bookId);
+      setBook(foundBook);
+      setChapters(bookChapters);
+      setLoading(false);
     }
 
-    // Ownership check - only allow editing own books
-    if (foundBook.author !== user.name) {
-      console.log("Access denied: Not the book author");
-      router.push("/dashboard/books");
-      return;
-    }
-
-    const allChapters = getChapters();
-    const bookChapters = allChapters.filter((c) => c.bookId === bookId);
-
-    setBook(foundBook);
-    setChapters(bookChapters);
-    setLoading(false);
+    loadBook();
   }, [bookId, router, user, authLoading]);
 
   const handleSubmit = () => {

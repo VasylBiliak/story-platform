@@ -29,6 +29,40 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Supabase Setup
+
+Authentication and session management are handled by **Supabase Auth**.
+
+### Environment Variables
+
+Create a `.env` file with:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
+```
+
+### Auth Flow
+
+- **Register** — `POST` to `supabase.auth.signUp({ email, password, options: { data: { name } } })`
+- **Login** — `POST` to `supabase.auth.signInWithPassword({ email, password })`
+- **Logout** — `POST` to `supabase.auth.signOut()`
+- **Session** — automatically persisted via `onAuthStateChange` listener in `AuthProvider`
+
+### Project Structure
+
+- `src/lib/supabaseClient.ts` — Supabase browser client initialization
+- `src/services/supabase.ts` — re-export of the Supabase client (mirrors reference project)
+- `src/components/auth/AuthProvider.tsx` — React context provider wrapping the app with session state
+- `src/contexts/AuthContext.tsx`, `src/contexts/useAuth.ts`, `src/contexts/AuthTypes.ts` — context/hooks/types aligned with reference project
+
+### Run Locally
+
+```bash
+npm install
+npm run dev
+```
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

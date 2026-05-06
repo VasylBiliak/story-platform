@@ -5,16 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Book, Chapter } from "@/lib/types";
-import { getBooks as getLocalBooks, getChapters as getLocalChapters } from "@/lib/storage";
-import { getBooks as getStaticBooks, getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
+import { getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
 import { getChaptersByBookSorted as getStaticChaptersByBook } from "@/lib/api/chapters";
 import { ChapterListItem } from "@/components/chapter/ChapterListItem";
-import { useAuth } from '@/components/auth/AuthProvider';
-
-
-function isLocalBook(bookId: string, localBooks: Book[]): boolean {
-  return localBooks.some((b) => b.id === bookId);
-}
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function BookPageClient() {
   const params = useParams();
@@ -27,27 +21,8 @@ export default function BookPageClient() {
 
   useEffect(() => {
     async function loadData() {
-      // Try static data first
-      let foundBook = await getStaticBookBySlug(bookSlug);
-      let foundChapters: Chapter[] = [];
-
-      if (foundBook) {
-        foundChapters = await getStaticChaptersByBook(foundBook.id);
-      } else {
-        // Fallback to localStorage
-        const localBooks = getLocalBooks();
-        foundBook = localBooks.find((b) => b.id === bookSlug) || null;
-        if (foundBook) {
-          const localChapters = getLocalChapters();
-          foundChapters = localChapters
-            .filter((c) => c.bookId === foundBook!.id)
-            .sort((a, b) => {
-              const numA = parseInt(a.id.split("-").pop() || "0");
-              const numB = parseInt(b.id.split("-").pop() || "0");
-              return numA - numB;
-            });
-        }
-      }
+      const foundBook = await getStaticBookBySlug(bookSlug);
+      const foundChapters = foundBook ? await getStaticChaptersByBook(foundBook.id) : [];
 
       setBook(foundBook);
       setChapters(foundChapters);
@@ -105,7 +80,7 @@ export default function BookPageClient() {
 
           {/* Edit */}
 
-          {user && user.name === book.author && isLocalBook(book.id, getLocalBooks()) && (
+          {user && user.name === book.author && (
             <Link
               href={`/dashboard/books/edit/${book.id}`}
               className="absolute top-4 right-4 md:top-8 md:right-8 

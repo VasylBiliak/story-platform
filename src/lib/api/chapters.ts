@@ -1,35 +1,31 @@
-import { chapters } from '@/data/chapters';
 import { Chapter } from '@/lib/types';
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+async function fetchApi<T>(path: string): Promise<T> {
+  const response = await fetch(path, {
+    headers: { "Accept": "application/json" },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || !payload?.success) {
+    const message = payload?.error || `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload.data as T;
+}
 
 export async function getChaptersByBook(bookId: string): Promise<Chapter[]> {
-  // Simulate network request
-  await delay(250);
-  
-  // In the future, this will be replaced with:
-  // const response = await fetch(`/api/books/${bookId}/chapters`);
-  // return response.json();
-  
-  return chapters.filter(c => c.bookId === bookId);
+  return fetchApi<Chapter[]>(`/api/chapters?bookId=${encodeURIComponent(bookId)}`);
 }
 
 export async function getChapterById(id: string): Promise<Chapter | null> {
-  // Simulate network request
-  await delay(200);
-  
-  // In the future, this will be replaced with:
-  // const response = await fetch(`/api/chapters/${id}`);
-  // return response.json();
-  
-  const chapter = chapters.find(c => c.id === id);
-  return chapter || null;
+  const result = await fetchApi<Chapter[]>(`/api/chapters?chapterId=${encodeURIComponent(id)}`);
+  return result?.[0] ?? null;
 }
 
 export async function getChaptersByBookSorted(bookId: string): Promise<Chapter[]> {
   const bookChapters = await getChaptersByBook(bookId);
-  // Sort by chapter number extracted from ID or keep original order
   return bookChapters.sort((a, b) => {
     const numA = parseInt(a.id.split('-').pop() || '0');
     const numB = parseInt(b.id.split('-').pop() || '0');
@@ -38,7 +34,8 @@ export async function getChaptersByBookSorted(bookId: string): Promise<Chapter[]
 }
 
 export async function getChapterBySlug(bookId: string, slug: string): Promise<Chapter | null> {
-  await delay(200);
-  const chapter = chapters.find(c => c.bookId === bookId && c.slug === slug);
-  return chapter || null;
+  const chapters = await fetchApi<Chapter[]>(
+    `/api/chapters?bookId=${encodeURIComponent(bookId)}&slug=${encodeURIComponent(slug)}`,
+  );
+  return chapters?.[0] ?? null;
 }

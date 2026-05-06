@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Book, Chapter } from "@/lib/types";
-import { getBooks as getLocalBooks, getChapters as getLocalChapters } from "@/lib/storage";
 import { getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
-import { getChapterBySlug as getStaticChapterBySlug } from "@/lib/api/chapters";
+import { getChapterBySlug as getStaticChapterBySlug, getChaptersByBook } from "@/lib/api/chapters";
 import { Paywall } from "@/components/chapter/Paywall";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
@@ -24,26 +23,9 @@ export default function ChapterPageClient() {
 
   useEffect(() => {
     async function loadData() {
-      // Try static data first
-      let foundBook = await getStaticBookBySlug(bookSlug);
-      let foundChapter = await getStaticChapterBySlug(bookSlug, chapterSlug);
-      let allChapters: Chapter[] = [];
-
-      if (foundBook && foundChapter) {
-        // Static data found
-        const staticChapters = await import("@/data/chapters").then((m) => m.chapters);
-        allChapters = staticChapters.filter((c: Chapter) => c.bookId === foundBook!.id);
-      } else {
-        // Fallback to localStorage
-        const localBooks = getLocalBooks();
-        foundBook = localBooks.find((b) => b.id === bookSlug) || null;
-
-        if (foundBook) {
-          const localChapters = getLocalChapters();
-          allChapters = localChapters.filter((c) => c.bookId === foundBook!.id);
-          foundChapter = allChapters.find((c) => c.slug === chapterSlug) || null;
-        }
-      }
+      const foundBook = await getStaticBookBySlug(bookSlug);
+      const foundChapter = await getStaticChapterBySlug(bookSlug, chapterSlug);
+      const allChapters: Chapter[] = foundBook ? await getChaptersByBook(foundBook.id) : [];
 
       setBook(foundBook);
       setChapter(foundChapter);

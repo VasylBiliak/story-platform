@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  name      String
+  password  String     
+  createdAt DateTime   @default(now())
+
+  Book      Book[]
+  Purchase  Purchase[]
+}
+
+model Book {
+  id          String     @id @default(cuid())
+  title       String
+  author      String
+  description String
+  cover       String
+  price       Float      @default(0)
+  createdAt   DateTime   @default(now())
+  ownerId     String?
+  User        User?      @relation(fields: [ownerId], references: [id])
+  chapters    Chapter[]
+  Purchase    Purchase[]
+
+  @@index([ownerId])
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  isFree    Boolean  @default(false)
+  slug      String
+  createdAt DateTime @default(now())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+}
+
+model Purchase {
+  id        String   @id
+  createdAt DateTime @default(now())
+  userId    String
+  bookId    String
+  Book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([userId])
+}

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter } from "@/lib/types";
-import { getBooks, getChapters } from "@/lib/storage";
+import { getBooks } from "@/lib/api/books";
+import { getChaptersByBookSorted } from "@/lib/api/chapters";
 import { BookForm } from "@/components/books/BookForm";
 
 export function BooksDashboard() {
@@ -11,15 +12,24 @@ export function BooksDashboard() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    setBooks(getBooks());
-    setChapters(getChapters());
+  const loadData = async () => {
+    const loadedBooks = await getBooks();
+    setBooks(loadedBooks);
+
+    const chapterLists = await Promise.all(
+      loadedBooks.map((book) => getChaptersByBookSorted(book.id)),
+    );
+
+    setChapters(chapterLists.flat());
     setLoaded(true);
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  const handleSubmit = () => {
-    setBooks(getBooks());
-    setChapters(getChapters());
+  const handleSubmit = async () => {
+    await loadData();
   };
 
   const getChaptersForBook = (bookId: string) =>

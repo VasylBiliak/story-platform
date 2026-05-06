@@ -24,119 +24,119 @@ Against all better judgment, she opened her banking app. Five thousand dollars h
 
 The code on her screen pulsed. And for the first time in her twenty-six years of life, Maya Chen felt like she had finally found where she belonged.`;
 
-export const chapters: Chapter[] = [
-  // Book: dark-future
-  {
-    id: 'dark-future-1',
-    bookId: 'dark-future',
-    title: 'Chapter 1: Awakening',
-    slug: 'chapter-1-awakening',
-    content: content,
-    isFree: true,
-  },
-  {
-    id: 'dark-future-2',
-    bookId: 'dark-future',
-    title: 'Chapter 2: System Breach',
-    slug: 'chapter-2-system-breach',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-  {
-    id: 'dark-future-3',
-    bookId: 'dark-future',
-    title: 'Chapter 3: New Reality',
-    slug: 'chapter-3-new-reality',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-  {
-    id: 'dark-future-4',
-    bookId: 'dark-future',
-    title: 'Chapter 4: New Reality',
-    slug: 'chapter-4-new-reality',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-  {
-    id: 'dark-future-5',
-    bookId: 'dark-future',
-    title: 'Chapter 5: New Reality',
-    slug: 'chapter-5-new-reality',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-  {
-    id: 'dark-future-6',
-    bookId: 'dark-future',
-    title: 'Chapter 6: New Reality',
-    slug: 'chapter-6-new-reality',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-  {
-    id: 'dark-future-7',
-    bookId: 'dark-future',
-    title: 'Chapter 7: New Reality',
-    slug: 'chapter-7-new-reality',
-    content: content,
-    isFree: false,
-    price: 2,
-  },
-
-  // Book: lost-in-space
-  {
-    id: 'lost-in-space-1',
-    bookId: 'lost-in-space',
-    title: 'Chapter 1: Departure',
-    slug: 'chapter-1-departure',
-    content: content,
-    isFree: true,
-  },
-  {
-    id: 'lost-in-space-2',
-    bookId: 'lost-in-space',
-    title: 'Chapter 2: Silence',
-    slug: 'chapter-2-silence',
-    content: content,
-    isFree: false,
-    price: 3,
-  },
-
-  // Book: ancient-kingdom
-  {
-    id: 'ancient-kingdom-1',
-    bookId: 'ancient-kingdom',
-    title: 'Chapter 1: The Fallen Crown',
-    slug: 'chapter-1-the-fallen-crown',
-    content: content,
-    isFree: true,
-  },
-
-  // Book: shadow-hunter
-  {
-    id: 'shadow-hunter-1',
-    bookId: 'shadow-hunter',
-    title: 'Chapter 1: The Hunt Begins',
-    slug: 'chapter-1-the-hunt-begins',
-    content: content,
-    isFree: true,
-  },
-
-
-  // Book: time-loop
-  {
-    id: 'time-loop-1',
-    bookId: 'time-loop',
-    title: 'Chapter 1: The Same Day',
-    slug: 'chapter-1-the-same-day',
-    content: content,
-    isFree: true,
-  },
-];
+// Mock data disabled — UI now uses Supabase responses
+// export const chapters: Chapter[] = [
+//   // Book: dark-future
+//   {
+//     id: 'dark-future-1',
+//     bookId: 'dark-future',
+//     title: 'Chapter 1: Awakening',
+//     slug: 'chapter-1-awakening',
+//     content: content,
+//     isFree: true,
+//   },
+//   {
+//     id: 'dark-future-2',
+//     bookId: 'dark-future',
+//     title: 'Chapter 2: System Breach',
+//     slug: 'chapter-2-system-breach',
+//     content: content,
+//     isFree: false,
+//     price: 2,
+//   },
+//   {
+//     id: 'dark-future-3',
+//     bookId: 'dark-future',
+//     title: 'Chapter 3: New Reality',
+//     slug: 'chapter-3-new-reality',
+//     content: content,
+//     isFree: false,
+//     price: 2,
+//   },
+//   {
+//     id: 'dark-future-4',
+//     bookId: 'dark-future',
+//     title: 'Chapter 4: New Reality',
+//     slug: 'chapter-4-new-reality',
+//     content: content,
+//     isFree: false,
+//     price: 2,
+//   },
+//   {
+//     id: 'dark-future-5',
+//     bookId: 'dark-future',
+//     title: 'Chapter 5: New Reality',
+//     slug: 'chapter-5-new-reality',
+//     content: content,
+//     isFree: false,
+//     price: 2,
+//   },
+//   {
+//     id: 'dark-future-6',
+//     bookId: 'dark-future',
+//     title: 'Chapter 6: New Reality',
+//     slug: 'chapter-6-new-reality',
+//     content: content,
+//     isFree: false,
+//     price: 2,
+//   },
+//   {
+//     id: 'dark-future-7',
+//     bookId: 'dark-future',
+//     title: 'Chapter 7: New Reality',
+//     slug: 'chapter-7-new-reality',
+//     content: content,
+//     isFree: false,
+//     price: 2,
+//   },
+//
+//   // Book: lost-in-space
+//   {
+//     id: 'lost-in-space-1',
+//     bookId: 'lost-in-space',
+//     title: 'Chapter 1: Departure',
+//     slug: 'chapter-1-departure',
+//     content: content,
+//     isFree: true,
+//   },
+//   {
+//     id: 'lost-in-space-2',
+//     bookId: 'lost-in-space',
+//     title: 'Chapter 2: Silence',
+//     slug: 'chapter-2-silence',
+//     content: content,
+//     isFree: false,
+//     price: 3,
+//   },
+//
+//   // Book: ancient-kingdom
+//   {
+//     id: 'ancient-kingdom-1',
+//     bookId: 'ancient-kingdom',
+//     title: 'Chapter 1: The Fallen Crown',
+//     slug: 'chapter-1-the-fallen-crown',
+//     content: content,
+//     isFree: true,
+//   },
+//
+//   // Book: shadow-hunter
+//   {
+//     id: 'shadow-hunter-1',
+//     bookId: 'shadow-hunter',
+//     title: 'Chapter 1: The Hunt Begins',
+//     slug: 'chapter-1-the-hunt-begins',
+//     content: content,
+//     isFree: true,
+//   },
+//
+//   // Book: time-loop
+//   {
+//     id: 'time-loop-1',
+//     bookId: 'time-loop',
+//     title: 'Chapter 1: The Same Day',
+//     slug: 'chapter-1-the-same-day',
+//     content: content,
+//     isFree: true,
+//   },
+// ];
 

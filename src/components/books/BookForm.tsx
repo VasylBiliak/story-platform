@@ -4,10 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter, ChapterImage } from "@/lib/types";
-import { getBooks, saveBooks, getChapters, saveChapters } from "@/lib/storage";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
 import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
+
 
 export type BookFormMode = "create" | "edit";
 
@@ -97,12 +97,22 @@ function calculateFinalPrice(price: number, discount: number = 0): number {
 export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const [form, setForm] = useState<FormState>(() => 
+  const [form, setForm] = useState<FormState>(() =>
     createInitialState(initialData?.book, initialData?.chapters)
   );
   const lastInputRef = useRef<HTMLInputElement | null>(null);
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  async function getAuthHeaders(): Promise<Record<string, string>> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    };
+  }
 
   const updateBook = (field: keyof FormState["book"], value: string) => {
     const sanitized = sanitizeText(value);
@@ -223,119 +233,81 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         c.images.every((img) => img.caption.trim().length <= INPUT_LIMITS.caption)
     );
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!initialData) return;
     const bookId = initialData.book.id;
+    setApiError(null);
 
-    // Remove book and its chapters
-    const existingBooks = getBooks();
-    const existingChapters = getChapters();
-    
-    const updatedBooks = existingBooks.filter((b) => b.id !== bookId);
-    const updatedChapters = existingChapters.filter((c) => c.bookId !== bookId);
-    
-    saveBooks(updatedBooks);
-    saveChapters(updatedChapters);
-    
-    console.log("Deleted Book:", bookId);
-    
-    router.push("/");
+    try {
+      const response = await fetch(`/api/books/${encodeURIComponent(bookId)}`, {
+        method: "DELETE",
+        headers: await getAuthHeaders(),
+      });
+
+      const payload = await response.json();
+      if (!payload?.success) {
+        setApiError(payload?.error || `Delete failed: HTTP ${response.status}`);
+        return;
+      }
+
+      router.push("/");
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Delete request failed");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
+    setApiError(null);
 
-    let createdBook: Book | undefined;
-    let createdChapters: Chapter[] | undefined;
-
-    if (mode === "create") {
-      const bookId = `${slugify(form.book.title)}-${Date.now()}`;
-
-      createdBook = {
-        id: bookId,
-        title: form.book.title.trim(),
-        description: form.book.description.trim(),
-        cover: form.book.cover.trim(),
-        author: user?.name || "Unknown Author",
-      };
-
-      createdChapters = form.chapters.map((c, i) => ({
-        id: `${bookId}-${i + 1}`,
-        bookId,
+    const bookPayload = {
+      title: form.book.title.trim(),
+      description: form.book.description.trim(),
+      cover: form.book.cover.trim(),
+      chapters: form.chapters.map((c, i) => ({
         title: c.title.trim(),
         slug: slugify(c.title) || `chapter-${i + 1}`,
         content: c.content.trim(),
         isFree: i === 0 ? true : c.isFree,
         price: c.isFree ? undefined : c.price,
         discount: c.isFree ? undefined : c.discount,
-        finalPrice: c.isFree ? undefined : (c.price !== undefined ? calculateFinalPrice(c.price, c.discount || 0) : undefined),
-        images: c.images.length > 0 
-          ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
-          : undefined,
-      }));
+        finalPrice:
+          c.isFree || c.price === undefined
+            ? undefined
+            : calculateFinalPrice(c.price, c.discount || 0),
+      })),
+    };
 
-      const existingBooks = getBooks();
-      const existingChapters = getChapters();
-      
-      saveBooks([...existingBooks, createdBook!]);
-      saveChapters([...existingChapters, ...createdChapters!]);
-      
-      console.log("Created Book:", createdBook);
-      console.log("Created Chapters:", createdChapters);
-    } else if (mode === "edit" && initialData) {
-      const bookId = initialData.book.id;
+    try {
+      const endpoint = mode === "create" ? "/api/books" : `/api/books/${encodeURIComponent(initialData?.book.id ?? "")}`;
+      const method = mode === "create" ? "POST" : "PUT";
+      const response = await fetch(endpoint, {
+        method,
+        headers: await getAuthHeaders(),
+        body: JSON.stringify(bookPayload),
+      });
 
-      createdBook = {
-        ...initialData.book,
-        title: form.book.title.trim(),
-        description: form.book.description.trim(),
-        cover: form.book.cover.trim(),
-        author: user?.name || initialData.book.author,
-      };
+      const payload = await response.json();
+      if (!payload?.success) {
+        setApiError(payload?.error || `Save failed: HTTP ${response.status}`);
+        return;
+      }
 
-      createdChapters = form.chapters.map((c, i) => ({
-        id: `${bookId}-${i + 1}`,
-        bookId,
-        title: c.title.trim(),
-        slug: slugify(c.title) || `chapter-${i + 1}`,
-        content: c.content.trim(),
-        isFree: i === 0 ? true : c.isFree,
-        price: c.isFree ? undefined : c.price,
-        discount: c.isFree ? undefined : c.discount,
-        finalPrice: c.isFree ? undefined : (c.price !== undefined ? calculateFinalPrice(c.price, c.discount || 0) : undefined),
-        images: c.images.length > 0 
-          ? c.images.map(img => ({ ...img, caption: img.caption.trim() }))
-          : undefined,
-      }));
+      onSubmit?.();
 
-      const existingBooks = getBooks();
-      const existingChapters = getChapters();
-      
-      // Update book
-      const updatedBooks = existingBooks.map((b) => 
-        b.id === bookId ? createdBook! : b
-      );
-      
-      // Replace chapters for this book
-      const filteredChapters = existingChapters.filter((c) => c.bookId !== bookId);
-      
-      saveBooks(updatedBooks);
-      saveChapters([...filteredChapters, ...createdChapters!]);
-      
-      console.log("Updated Book:", createdBook);
-      console.log("Updated Chapters:", createdChapters);
-    }
+      const bookSlug = payload.data?.id;
+      if (mode === "create") {
+        setForm(createInitialState());
+      }
 
-    onSubmit?.();
-    
-    if (mode === "create") {
-      setForm(createInitialState());
-      const bookSlug = createdBook?.id;
-      router.push(`/book/${bookSlug}`);
-    } else {
-      const bookSlug = createdBook?.id;
-      router.push(`/book/${bookSlug}`);
+      if (bookSlug) {
+        router.push(`/book/${bookSlug}`);
+      } else {
+        router.push("/dashboard/books");
+      }
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Save request failed");
     }
   };
 
@@ -603,6 +575,12 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
           + Add Chapter
         </Button>
       </div>
+
+      {apiError && (
+        <div className="p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          {apiError}
+        </div>
+      )}
 
       <div className="flex gap-3">
         {mode === "edit" && (
