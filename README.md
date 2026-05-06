@@ -33,15 +33,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 Authentication and session management are handled by **Supabase Auth**.
 
-### Environment Variables
-
-Create a `.env` file with:
-
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
-```
-
 ### Auth Flow
 
 - **Register** — `POST` to `supabase.auth.signUp({ email, password, options: { data: { name } } })`

@@ -1,12 +1,20 @@
-import { findAllBooks, findBookById, createBookWithChapters, updateBookWithChapters, deleteBookById } from "@/server/repositories/bookRepository";
-import { findChaptersByBookId } from "@/server/repositories/chapterRepository";
+import { prisma } from "@/server/prisma";
 
 export async function getBooks() {
-  return findAllBooks();
+  return prisma.book.findMany({
+    include: {
+      chapters: true,
+    },
+  });
 }
 
 export async function getBookById(bookId: string) {
-  return findBookById(bookId);
+  return prisma.book.findUnique({
+    where: { id: bookId },
+    include: {
+      chapters: true,
+    },
+  });
 }
 
 export async function createBook(userId: string, payload: {
@@ -24,7 +32,18 @@ export async function createBook(userId: string, payload: {
     finalPrice?: number;
   }>;
 }) {
-  return createBookWithChapters(userId, payload);
+  return prisma.book.create({
+    data: {
+      title: payload.title,
+      description: payload.description,
+      cover: payload.cover,
+      author: payload.author,
+      ownerId: userId,
+      chapters: {
+        create: payload.chapters,
+      },
+    },
+  });
 }
 
 export async function updateBook(bookId: string, payload: {
@@ -41,13 +60,22 @@ export async function updateBook(bookId: string, payload: {
     finalPrice?: number;
   }>;
 }) {
-  return updateBookWithChapters(bookId, payload);
+  return prisma.book.update({
+    where: { id: bookId },
+    data: {
+      title: payload.title,
+      description: payload.description,
+      cover: payload.cover,
+      chapters: {
+        deleteMany: {},
+        create: payload.chapters,
+      },
+    },
+  });
 }
 
 export async function deleteBook(bookId: string) {
-  return deleteBookById(bookId);
-}
-
-export async function getBookChapters(bookId: string) {
-  return findChaptersByBookId(bookId);
+  return prisma.book.delete({
+    where: { id: bookId },
+  });
 }

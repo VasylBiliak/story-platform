@@ -1,9 +1,19 @@
-import { findAllChapters, findChapterByBookIdAndSlug } from "@/server/repositories/chapterRepository";
+import { prisma } from "@/server/prisma";
 
 export async function getChapters(bookId?: string, slug?: string) {
-  return findAllChapters(bookId, slug);
+  return prisma.chapter.findMany({
+    where: {
+      bookId: bookId || undefined,
+      slug: slug || undefined,
+    },
+  });
 }
 
 export async function getChapterBySlug(bookId: string, slug: string) {
-  return findChapterByBookIdAndSlug(bookId, slug);
+  return prisma.chapter.findFirst({
+    where: {
+      bookId,
+      slug,
+    },
+  });
 }

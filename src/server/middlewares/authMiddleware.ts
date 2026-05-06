@@ -46,16 +46,3 @@ export function getUserFromRequest(req: NextRequest): AuthUser | null {
     return null;
   }
 }
-
-// =========================
-// REQUIRE AUTH
-// =========================
-export function requireAuth(req: NextRequest): AuthUser {
-  const user = getUserFromRequest(req);
-
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
-
-  return user;
-}
