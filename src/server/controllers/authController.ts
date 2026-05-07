@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { loginSchema, registerSchema } from "@/server/utils/validation";
-import { successResponse, errorResponse, unauthorizedResponse } from "@/server/utils/api";
 import { loginUser, registerUser } from "@/server/services/authService";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { AUTH_COOKIE_NAME } from "@/server/middlewares/authMiddleware";
@@ -13,43 +12,63 @@ const cookieOptions = {
   maxAge: 60 * 60 * 24 * 7,
 };
 
-function buildAuthResponse(user: { id: string; email: string }, token: string) {
-  const response = successResponse({ user });
-  response.cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
-  return response;
-}
-
 export async function registerHandler(req: NextRequest) {
   try {
     const body = await req.json();
 
     const parseResult = registerSchema.safeParse(body);
     if (!parseResult.success) {
-      return errorResponse(
-        parseResult.error.errors[0]?.message ?? "Invalid input",
-        422
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid input",
+        },
+        { status: 400 }
       );
     }
 
-const { user, token } = await registerUser(
-  parseResult.data.email,
-  parseResult.data.password,
-  parseResult.data.name
-);
+    const { user, token } = await registerUser(
+      parseResult.data.email,
+      parseResult.data.password,
+      parseResult.data.name
+    );
 
-    const response = successResponse({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    });
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: "User registered successfully",
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      },
+      { status: 201 }
+    );
 
     response.cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
 
     return response;
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
+    console.error("[AUTH_ERROR] REGISTER:", error);
 
-    return errorResponse("Failed to register", 500);
+    if (error instanceof Error && error.message === "User already exists") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "User already exists",
+        },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -59,9 +78,12 @@ export async function loginHandler(req: NextRequest) {
 
     const parseResult = loginSchema.safeParse(body);
     if (!parseResult.success) {
-      return errorResponse(
-        parseResult.error.errors[0]?.message ?? "Invalid input",
-        422
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid input",
+        },
+        { status: 400 }
       );
     }
 
@@ -70,18 +92,42 @@ export async function loginHandler(req: NextRequest) {
       parseResult.data.password
     );
 
-    const response = successResponse({
-      id: user.id,
-      email: user.email,
-    });
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: "Login successful",
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      },
+      { status: 200 }
+    );
 
     response.cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
 
     return response;
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
+    console.error("[AUTH_ERROR] LOGIN:", error);
 
-    return errorResponse("Invalid credentials", 401);
+    if (error instanceof Error && error.message === "Invalid credentials") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid email or password",
+        },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -90,26 +136,52 @@ export async function meHandler(req: NextRequest) {
     const user = await getCurrentUser(req);
 
     if (!user) {
-      return unauthorizedResponse();
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized",
+        },
+        { status: 401 }
+      );
     }
 
-    return successResponse({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("ME ERROR:", error);
+    console.error("[AUTH_ERROR] ME:", error);
 
-    return unauthorizedResponse();
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }
 
 export async function logoutHandler() {
-  const response = successResponse({ message: "Logged out" });
+  const response = NextResponse.json(
+    {
+      success: true,
+      message: "Logged out successfully",
+    },
+    { status: 200 }
+  );
+
   response.cookies.set(AUTH_COOKIE_NAME, "", {
     ...cookieOptions,
     maxAge: 0,
   });
+
   return response;
 }
