@@ -29,24 +29,6 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Supabase Setup
-
-Authentication and session management are handled by **Supabase Auth**.
-
-### Auth Flow
-
-- **Register** — `POST` to `supabase.auth.signUp({ email, password, options: { data: { name } } })`
-- **Login** — `POST` to `supabase.auth.signInWithPassword({ email, password })`
-- **Logout** — `POST` to `supabase.auth.signOut()`
-- **Session** — automatically persisted via `onAuthStateChange` listener in `AuthProvider`
-
-### Project Structure
-
-- `src/lib/supabaseClient.ts` — Supabase browser client initialization
-- `src/services/supabase.ts` — re-export of the Supabase client (mirrors reference project)
-- `src/components/auth/AuthProvider.tsx` — React context provider wrapping the app with session state
-- `src/contexts/AuthContext.tsx`, `src/contexts/useAuth.ts`, `src/contexts/AuthTypes.ts` — context/hooks/types aligned with reference project
-
 ### Run Locally
 
 ```bash

@@ -106,11 +106,10 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const [apiError, setApiError] = useState<string | null>(null);
 
   async function getAuthHeaders(): Promise<Record<string, string>> {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    // Token is automatically sent via HTTP-only cookie
+    // Additional headers for JSON content
     return {
       "Content-Type": "application/json",
-      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     };
   }
 

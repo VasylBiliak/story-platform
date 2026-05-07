@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse, notFoundResponse, unauthorizedResponse } from "@/server/utils/api";
 import { getUserFromRequest } from "@/server/middlewares/authMiddleware";
+import { getCurrentUser } from "@/lib/getCurrentUser";
 import { createBook, deleteBook, getBookById, getBooks, updateBook } from "@/server/services/bookService";
 import { getChapters } from "@/server/services/chapterService";
 import { bookCreateSchema } from "@/server/utils/validation";
@@ -35,8 +36,38 @@ export async function getChaptersHandler(req: NextRequest) {
   return successResponse(chapters);
 }
 
+// bookController.ts
+
 export async function createBookHandler(req: NextRequest) {
-  const user = await getUserFromRequest(req);
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) return unauthorizedResponse();
+
+    const body = await req.json();
+
+    const parseResult = bookCreateSchema.safeParse(body);
+    if (!parseResult.success) {
+      return errorResponse(
+        parseResult.error.errors[0]?.message ?? "Invalid input",
+        422
+      );
+    }
+
+    const book = await createBook(user.id, {
+      ...parseResult.data,
+      author: user.name || user.email,
+    });
+
+    return successResponse(book);
+  } catch (error) {
+    console.error("CREATE BOOK ERROR:", error);
+
+    return errorResponse("Internal Server Error", 500);
+  }
+}
+
+/*export async function createBookHandler(req: NextRequest) {
+   const user = await getUserFromRequest(req);
   if (!user) {
     return unauthorizedResponse();
   }
@@ -61,10 +92,10 @@ export async function createBookHandler(req: NextRequest) {
     console.error("[BookController] createBook error:", error);
     return errorResponse(error instanceof Error ? error.message : "Failed to create book", 500);
   }
-}
+} */
 
 export async function updateBookHandler(req: NextRequest, bookId: string) {
-  const user = await getUserFromRequest(req);
+  const user = await getCurrentUser(req);
   if (!user) {
     return unauthorizedResponse();
   }
@@ -80,7 +111,7 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
     if (!existingBook) {
       return notFoundResponse("Book not found");
     }
-    if (existingBook.ownerId !== user.userId) {
+    if (existingBook.ownerId !== user.id) {
       return unauthorizedResponse();
     }
 
@@ -88,6 +119,7 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
       title: parseResult.data.title,
       description: parseResult.data.description,
       cover: parseResult.data.cover,
+      price: parseResult.data.price,
       chapters: parseResult.data.chapters,
     });
     console.log("[BookController] Book updated:", updatedBook.id);
@@ -99,7 +131,7 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
 }
 
 export async function deleteBookHandler(req: NextRequest, bookId: string) {
-  const user = await getUserFromRequest(req);
+  const user = await getCurrentUser(req);
   if (!user) {
     return unauthorizedResponse();
   }
@@ -108,7 +140,7 @@ export async function deleteBookHandler(req: NextRequest, bookId: string) {
   if (!existingBook) {
     return notFoundResponse("Book not found");
   }
-  if (existingBook.ownerId !== user.userId) {
+  if (existingBook.ownerId !== user.id) {
     return unauthorizedResponse();
   }
 

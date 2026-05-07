@@ -1,8 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { loginHandler } from "@/server/controllers/authController";
 
-export async function POST() {
-  return NextResponse.json(
-    { success: false, error: "Auth migrated to Supabase client-side" },
-    { status: 410 }
-  );
+export async function POST(req: NextRequest) {
+  return loginHandler(req);
 }

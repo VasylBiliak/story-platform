@@ -35,16 +35,28 @@ model Book {
 }
 
 model Chapter {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  isFree    Boolean  @default(false)
-  slug      String
-  createdAt DateTime @default(now())
-  bookId    String
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  slug        String
+  createdAt   DateTime @default(now())
+  price       Float    @default(0)
+  discount    Float?   @default(0)
+  bookId      String
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  images      ChapterImage[]
 
   @@index([bookId])
+}
+
+model ChapterImage {
+  id        String   @id @default(cuid())
+  url       String?
+  caption   String?
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId])
 }
 
 model Purchase {

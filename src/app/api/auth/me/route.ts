@@ -1,8 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { meHandler } from "@/server/controllers/authController";
 
-export async function GET() {
-  return NextResponse.json(
-    { success: false, error: "Auth migrated to Supabase client-side" },
-    { status: 410 }
-  );
+export async function GET(req: NextRequest) {
+  return meHandler(req);
 }

@@ -22,7 +22,7 @@ function verifyToken(token: string): { userId: string } | null {
   }
 }
 
-export async function POST(req) {
+export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
 
   const user = await prisma.user.findUnique({ where: { email } });

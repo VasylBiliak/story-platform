@@ -1,21 +1,6 @@
-import { NextResponse } from "next/server";
-import { registerUser } from "@/server/services/authService";
+import { NextRequest } from "next/server";
+import { registerHandler } from "@/server/controllers/authController";
 
-export async function POST(req: Request) {
-  try {
-    const { name, email, password } = await req.json();
-
-    const data = await registerUser(email, password, name);
-
-    return NextResponse.json({
-      success: true,
-      user: data.user,
-      token: data.token,
-    });
-  } catch (e: any) {
-    return NextResponse.json(
-      { success: false, error: e.message },
-      { status: 400 }
-    );
-  }
+export async function POST(req: NextRequest) {
+  return registerHandler(req);
 }

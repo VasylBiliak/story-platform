@@ -3,6 +3,7 @@ import { prisma } from "@/server/prisma";
 export type CreateUserParams = {
   email: string;
   name: string;
+  password: string;
 };
 
 export async function findUserByEmail(email: string) {

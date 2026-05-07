@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
+export const AUTH_COOKIE_NAME = "auth_token";
+
 export type AuthUser = {
   userId: string;
   email: string;
@@ -18,7 +20,7 @@ export function getTokenFromRequest(req: NextRequest): string | null {
     return authHeader.slice(7);
   }
 
-  const cookie = req.cookies.get("auth_token");
+  const cookie = req.cookies.get(AUTH_COOKIE_NAME);
   if (cookie) return cookie.value;
 
   return null;

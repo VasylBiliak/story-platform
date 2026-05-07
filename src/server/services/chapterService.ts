@@ -17,3 +17,25 @@ export async function getChapterBySlug(bookId: string, slug: string) {
     },
   });
 }
+
+export async function createChapter(
+  bookId: string,
+  payload: {
+    title: string;
+    content: string;
+    slug: string;
+    price?: number;
+    isFree?: boolean;
+  }
+) {
+  return prisma.chapter.create({
+    data: {
+      title: payload.title,
+      content: payload.content,
+      slug: payload.slug,
+      bookId,
+      price: payload.isFree ? 0 : payload.price ?? 0,
+    },
+  });
+}
+
