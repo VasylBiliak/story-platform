@@ -107,10 +107,8 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
 
   async function getAuthHeaders(): Promise<Record<string, string>> {
     // Token is automatically sent via HTTP-only cookie
-    // Additional headers for JSON content
-    return {
-      "Content-Type": "application/json",
-    };
+    // No Content-Type header needed - browser sets it automatically for FormData
+    return {};
   }
 
   const updateBook = (field: keyof FormState["book"], value: string) => {
@@ -268,15 +266,33 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         title: c.title.trim(),
         slug: slugify(c.title) || `chapter-${i + 1}`,
         content: c.content.trim(),
-        isFree: i === 0 ? true : c.isFree,
-        price: c.isFree ? undefined : c.price,
-        discount: c.isFree ? undefined : c.discount,
-        finalPrice:
-          c.isFree || c.price === undefined
-            ? undefined
-            : calculateFinalPrice(c.price, c.discount || 0),
+        price: c.isFree ? 0 : (c.price ?? 0),
+        discount: c.isFree ? 0 : (c.discount ?? 0),
+        images: c.images.map((img) => ({
+          caption: img.caption,
+        })),
       })),
     };
+
+    const formData = new FormData();
+    formData.append("book", JSON.stringify(bookPayload));
+
+    form.chapters.forEach((chapter, chapterIndex) => {
+      chapter.images.forEach((image, imageIndex) => {
+        if (image.url.startsWith("data:")) {
+          const base64Data = image.url.split(",")[1];
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: "image/jpeg" });
+          const file = new File([blob], `chapter-${chapterIndex}-image-${imageIndex}.jpg`, { type: "image/jpeg" });
+          formData.append(`chapterImages[${chapterIndex}][${imageIndex}]`, file);
+        }
+      });
+    });
 
     try {
       const endpoint = mode === "create" ? "/api/books" : `/api/books/${encodeURIComponent(initialData?.book.id ?? "")}`;
@@ -284,7 +300,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       const response = await fetch(endpoint, {
         method,
         headers: await getAuthHeaders(),
-        body: JSON.stringify(bookPayload),
+        body: formData,
       });
 
       const payload = await response.json();
