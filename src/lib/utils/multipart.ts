@@ -6,9 +6,10 @@ export function parseChapterImages(formData: FormData): File[][] {
   const chapterImages: File[][] = [];
   const chapterMap = new Map<number, File[]>();
 
+  // Pattern: chapterImages_{chapterIndex}_{imageIndex}
   for (const [key, value] of formData.entries()) {
-    if (key.startsWith("chapterImages[") && value instanceof File) {
-      const match = key.match(/chapterImages\[(\d+)\]\[(\d+)\]/);
+    if (key.startsWith("chapterImages_") && value instanceof File) {
+      const match = key.match(/chapterImages_(\d+)_(\d+)/);
       if (match) {
         const chapterIndex = parseInt(match[1], 10);
         const imageIndex = parseInt(match[2], 10);

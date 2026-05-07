@@ -95,18 +95,38 @@ export async function createBookHandler(req: NextRequest) {
 } */
 
 export async function updateBookHandler(req: NextRequest, bookId: string) {
-  const user = await getCurrentUser(req);
-  if (!user) {
-    return unauthorizedResponse();
-  }
-
-  const body = await req.json();
-  const parseResult = bookCreateSchema.safeParse(body);
-  if (!parseResult.success) {
-    return errorResponse(parseResult.error.errors[0]?.message ?? "Invalid input", 422);
-  }
-
   try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return unauthorizedResponse();
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    let body;
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      const rawBook = formData.get("book");
+      if (!rawBook || typeof rawBook !== "string") {
+        return errorResponse("Invalid book payload format", 400);
+      }
+      try {
+        body = JSON.parse(rawBook);
+      } catch (error) {
+        console.error("[BOOK_PARSE_ERROR]", error);
+        return errorResponse("Invalid JSON payload", 400);
+      }
+    } else if (contentType.includes("application/json")) {
+      body = await req.json();
+    } else {
+      return errorResponse("Unsupported content-type. Use application/json or multipart/form-data", 400);
+    }
+
+    const parseResult = bookCreateSchema.safeParse(body);
+    if (!parseResult.success) {
+      return errorResponse(parseResult.error.errors[0]?.message ?? "Invalid input", 422);
+    }
+
     const existingBook = await getBookById(bookId);
     if (!existingBook) {
       return notFoundResponse("Book not found");

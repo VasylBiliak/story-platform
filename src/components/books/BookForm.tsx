@@ -286,10 +286,10 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
           for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
           }
-          const byteArray = new Uint8Array(byteNumbers);
+          const byteArray = new Uint8Array(byteNumbers as unknown as ArrayLike<number>);
           const blob = new Blob([byteArray], { type: "image/jpeg" });
           const file = new File([blob], `chapter-${chapterIndex}-image-${imageIndex}.jpg`, { type: "image/jpeg" });
-          formData.append(`chapterImages[${chapterIndex}][${imageIndex}]`, file);
+          formData.append(`chapterImages_${chapterIndex}_${imageIndex}`, file);
         }
       });
     });

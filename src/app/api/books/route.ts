@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
       return errorResponse("Invalid JSON structure in book data", 400);
     }
 
+    console.log("[BOOK_PAYLOAD_BEFORE_VALIDATION]", JSON.stringify(bookData, null, 2));
+
     const parseResult = bookCreateSchema.safeParse(bookData);
     if (!parseResult.success) {
       console.error("[API] POST books error: Validation failed", parseResult.error.errors);
