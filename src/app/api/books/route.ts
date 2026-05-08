@@ -10,15 +10,10 @@ import {
   unauthorizedResponse,
   serverErrorResponse,
 } from "@/lib/api-response";
+import { listBooksHandler } from "@/server/modules/books/book.controller";
 
 export async function GET() {
-  try {
-    const books = await BookService.getBooks();
-    return successResponse("Books retrieved successfully", books);
-  } catch (error) {
-    console.error("[API] GET books error:", error);
-    return serverErrorResponse();
-  }
+  return listBooksHandler();
 }
 
 export async function POST(req: NextRequest) {

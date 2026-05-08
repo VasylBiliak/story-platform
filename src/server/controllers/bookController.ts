@@ -1,8 +1,12 @@
+/**
+ * @deprecated This controller is deprecated. Use @/server/modules/books/book.controller instead.
+ * This file is kept for backward compatibility but will be removed in a future version.
+ */
+
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse, notFoundResponse, unauthorizedResponse } from "@/server/utils/api";
-import { getUserFromRequest } from "@/server/middlewares/authMiddleware";
 import { getCurrentUser } from "@/lib/getCurrentUser";
-import { createBook, deleteBook, getBookById, getBooks, updateBook } from "@/server/services/bookService";
+import { createBook, deleteBook, getBookById, getBooks } from "@/server/services/bookService";
 import { getChapters } from "@/server/services/chapterService";
 import { bookCreateSchema } from "@/server/utils/validation";
 
@@ -36,8 +40,6 @@ export async function getChaptersHandler(req: NextRequest) {
   return successResponse(chapters);
 }
 
-// bookController.ts
-
 export async function createBookHandler(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
@@ -63,114 +65,6 @@ export async function createBookHandler(req: NextRequest) {
     console.error("CREATE BOOK ERROR:", error);
 
     return errorResponse("Internal Server Error", 500);
-  }
-}
-
-/*export async function createBookHandler(req: NextRequest) {
-   const user = await getUserFromRequest(req);
-  if (!user) {
-    return unauthorizedResponse();
-  }
-
-  const body = await req.json();
-  const parseResult = bookCreateSchema.safeParse(body);
-  if (!parseResult.success) {
-    return errorResponse(parseResult.error.errors[0]?.message ?? "Invalid input", 422);
-  }
-
-  try {
-    const book = await createBook(user.userId, {
-      title: parseResult.data.title,
-      description: parseResult.data.description,
-      cover: parseResult.data.cover,
-      author: user.email,
-      chapters: parseResult.data.chapters,
-    });
-    console.log("[BookController] Book created:", book.id);
-    return successResponse(book);
-  } catch (error) {
-    console.error("[BookController] createBook error:", error);
-    return errorResponse(error instanceof Error ? error.message : "Failed to create book", 500);
-  }
-} */
-
-export async function updateBookHandler(req: NextRequest, bookId: string) {
-  try {
-    const user = await getCurrentUser(req);
-    if (!user) {
-      return unauthorizedResponse();
-    }
-
-    const contentType = req.headers.get("content-type") || "";
-    let body;
-    let uploadedChapterImages: File[][] = [];
-
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-      const rawBook = formData.get("book");
-      if (!rawBook || typeof rawBook !== "string") {
-        return errorResponse("Invalid book payload format", 400);
-      }
-      try {
-        body = JSON.parse(rawBook);
-      } catch (error) {
-        console.error("[BOOK_PARSE_ERROR]", error);
-        return errorResponse("Invalid JSON payload", 400);
-      }
-
-      // Extract uploaded chapter images
-      const chapters = body.chapters || [];
-uploadedChapterImages = chapters.map((chapter: any, chapterIndex: number) => {
-  const images: File[] = [];
-
-  const chapterImages = chapter.images || [];
-
-  for (let imageIndex = 0; imageIndex < chapterImages.length; imageIndex++) {
-    const file = formData.get(
-      `chapterImages_${chapterIndex}_${imageIndex}`
-    );
-
-    if (file instanceof File && file.size > 0) {
-      images.push(file);
-    }
-  }
-
-  return images;
-});
-      
-      console.log("[BOOK_CONTROLLER] Extracted uploaded images:", uploadedChapterImages.map(imgs => imgs.length));
-    } else if (contentType.includes("application/json")) {
-      body = await req.json();
-    } else {
-      return errorResponse("Unsupported content-type. Use application/json or multipart/form-data", 400);
-    }
-
-    const parseResult = bookCreateSchema.safeParse(body);
-    if (!parseResult.success) {
-      return errorResponse(parseResult.error.errors[0]?.message ?? "Invalid input", 422);
-    }
-
-    const existingBook = await getBookById(bookId);
-    if (!existingBook) {
-      return notFoundResponse("Book not found");
-    }
-    if (existingBook.ownerId !== user.id) {
-      return unauthorizedResponse();
-    }
-
-    const updatedBook = await updateBook(bookId, {
-      title: parseResult.data.title,
-      description: parseResult.data.description,
-      cover: parseResult.data.cover,
-      price: parseResult.data.price,
-      chapters: parseResult.data.chapters,
-    }, uploadedChapterImages.length > 0 ? uploadedChapterImages : undefined);
-    
-    console.log("[BookController] Book updated:", updatedBook.id);
-    return successResponse(updatedBook);
-  } catch (error) {
-    console.error("[BookController] updateBook error:", error);
-    return errorResponse(error instanceof Error ? error.message : "Failed to update book", 500);
   }
 }
 

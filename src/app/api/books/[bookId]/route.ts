@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getBookByIdHandler, updateBookHandler, deleteBookHandler } from "@/server/controllers/bookController";
+import { getBookByIdHandler, updateBookHandler, deleteBookHandler } from "@/server/modules/books/book.controller";
 
 export async function GET(req: NextRequest, context: { params: Promise<{ bookId: string }> }) {
   const { bookId } = await context.params;

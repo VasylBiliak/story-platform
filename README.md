@@ -45,6 +45,20 @@ prisma/
 - `src/lib/validators/book.ts` — Book and chapter validation schemas
 - `src/app/api/**/route.ts` — API route handlers that call controllers
 
+src/server/
+├── core/errors/
+│   └── AppError.ts                    # Custom error classes
+└── modules/books/
+    ├── book.controller.ts              # Thin HTTP request/response layer
+    ├── book.service.ts                 # Orchestration layer
+    ├── book.parser.ts                  # Request parsing logic
+    ├── book.validator.ts               # Schema validation
+    ├── book.permissions.ts             # Authorization checks
+    ├── book.mapper.ts                  # Data transformation
+    └── utils/
+        ├── parseMultipartBook.ts       # FormData parsing
+        └── extractChapterImages.ts    # Image extraction
+
 ## Getting Started
 
 First, run the development server:
