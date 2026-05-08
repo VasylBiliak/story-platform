@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Book, Chapter } from "@/lib/types";
-import { getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
-import { getChapterBySlug as getStaticChapterBySlug, getChaptersByBook } from "@/lib/api/chapters";
 import { Paywall } from "@/components/chapter/Paywall";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
@@ -20,17 +18,43 @@ export default function ChapterPageClient() {
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
-      const foundBook = await getStaticBookBySlug(bookSlug);
-      const foundChapter = await getStaticChapterBySlug(bookSlug, chapterSlug);
-      const allChapters: Chapter[] = foundBook ? await getChaptersByBook(foundBook.id) : [];
+      try {
+        setLoading(true);
+        setError(null);
 
-      setBook(foundBook);
-      setChapter(foundChapter);
-      setChapters(allChapters);
-      setLoading(false);
+        // Fetch book data from backend API
+        const bookResponse = await fetch(`/api/books/${encodeURIComponent(bookSlug)}`);
+        const bookPayload = await bookResponse.json();
+
+        if (!bookPayload?.success || !bookPayload.data) {
+          setError(bookPayload?.error || "Book not found");
+          setBook(null);
+          setChapter(null);
+          setChapters([]);
+          setLoading(false);
+          return;
+        }
+
+        const foundBook = bookPayload.data;
+        const foundChapter = foundBook.chapters?.find((c: Chapter) => c.slug === chapterSlug);
+        const allChapters = foundBook.chapters || [];
+
+        setBook(foundBook);
+        setChapter(foundChapter || null);
+        setChapters(allChapters);
+      } catch (err) {
+        console.error("Error loading chapter data:", err);
+        setError("Failed to load chapter data");
+        setBook(null);
+        setChapter(null);
+        setChapters([]);
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadData();
@@ -39,17 +63,17 @@ export default function ChapterPageClient() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <p className="text-text-secondary">Loading...</p>
+        <p className="text-text-secondary">Loading chapter...</p>
       </div>
     );
   }
 
-  if (!book || !chapter) {
+  if (error || !book || !chapter) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-2xl font-bold text-text-primary mb-4">Chapter Not Found</h1>
         <p className="text-text-secondary mb-6">
-          The chapter you are looking for does not exist.
+          {error || "The chapter you are looking for does not exist."}
         </p>
         <Link
           href="/"

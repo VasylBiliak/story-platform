@@ -103,6 +103,7 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
 
     const contentType = req.headers.get("content-type") || "";
     let body;
+    let uploadedChapterImages: File[][] = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
@@ -116,6 +117,27 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
         console.error("[BOOK_PARSE_ERROR]", error);
         return errorResponse("Invalid JSON payload", 400);
       }
+
+      // Extract uploaded chapter images
+      const chapters = body.chapters || [];
+      uploadedChapterImages = chapters.map((chapter: any, index: number) => {
+        const images: File[] = [];
+        const chapterImages = chapter.images || [];
+        
+        for (let i = 0; i < chapterImages.length; i++) {
+          const image = chapterImages[i];
+          if (image.file !== undefined) {
+            const file = formData.get(`chapter_${index}_image_${i}`) as File;
+            if (file) {
+              images.push(file);
+            }
+          }
+        }
+        
+        return images;
+      });
+      
+      console.log("[BOOK_CONTROLLER] Extracted uploaded images:", uploadedChapterImages.map(imgs => imgs.length));
     } else if (contentType.includes("application/json")) {
       body = await req.json();
     } else {
@@ -141,7 +163,8 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
       cover: parseResult.data.cover,
       price: parseResult.data.price,
       chapters: parseResult.data.chapters,
-    });
+    }, uploadedChapterImages.length > 0 ? uploadedChapterImages : undefined);
+    
     console.log("[BookController] Book updated:", updatedBook.id);
     return successResponse(updatedBook);
   } catch (error) {

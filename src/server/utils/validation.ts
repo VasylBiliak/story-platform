@@ -22,9 +22,9 @@ export const bookCreateSchema = z.object({
       title: z.string().min(1).max(120),
       slug: z.string().min(1).max(160),
       content: z.string().min(1),
-      isFree: z.boolean(),
+      isFree: z.boolean().optional(),
       price: z.number().nonnegative().optional(),
-      discount: z.number().int().min(0).max(999).optional(),
+      discount: z.number().int().min(0).max(100).optional(),
       finalPrice: z.number().nonnegative().optional(),
       images: z.array(
         z.object({
@@ -43,4 +43,5 @@ export const chapterCreateSchema = z.object({
   bookId: z.string().min(1),
   price: z.number().nonnegative().optional(),
   isFree: z.boolean().optional(),
+  discount: z.number().int().min(0).max(100).optional(),
 });

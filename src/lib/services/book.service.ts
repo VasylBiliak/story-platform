@@ -1,6 +1,16 @@
 import { prisma } from "@/server/prisma";
 import type { BookCreateInput } from "@/lib/validators/book";
 import type { UploadedFile } from "@/lib/upload";
+import type { Chapter } from "@/lib/types";
+
+function calculateFinalPrice(price: number, discount: number = 0): number {
+  const finalPrice = price * (1 - discount / 100);
+  return Math.max(0, Math.round(finalPrice * 100) / 100);
+}
+
+function calculateIsFree(price: number): boolean {
+  return price === 0;
+}
 
 export class BookService {
   static async createBookWithChapters(
@@ -83,6 +93,16 @@ export class BookService {
         });
 
         console.log("[BOOK_CREATED_SUCCESSFULLY]", createdBook.id);
+        
+        // Add computed fields
+        if (bookWithRelations) {
+          bookWithRelations.chapters = bookWithRelations.chapters.map(chapter => ({
+            ...chapter,
+            isFree: calculateIsFree(chapter.price),
+            finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
+          })) as any;
+        }
+        
         return bookWithRelations;
       });
 
@@ -220,6 +240,16 @@ export class BookService {
         });
 
         console.log("[BOOK_UPDATED_SUCCESSFULLY]", updatedBook.id);
+        
+        // Add computed fields
+        if (bookWithRelations) {
+          bookWithRelations.chapters = bookWithRelations.chapters.map(chapter => ({
+            ...chapter,
+            isFree: calculateIsFree(chapter.price),
+            finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
+          })) as any;
+        }
+        
         return bookWithRelations;
       });
 
@@ -231,7 +261,7 @@ export class BookService {
   }
 
   static async getBookById(bookId: string) {
-    return prisma.book.findUnique({
+    const book = await prisma.book.findUnique({
       where: { id: bookId },
       include: {
         chapters: {
@@ -241,10 +271,21 @@ export class BookService {
         },
       },
     });
+
+    if (!book) return null;
+
+    // Add computed fields
+    book.chapters = book.chapters.map(chapter => ({
+      ...chapter,
+      isFree: calculateIsFree(chapter.price),
+      finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
+    })) as any;
+
+    return book;
   }
 
   static async getBooks() {
-    return prisma.book.findMany({
+    const books = await prisma.book.findMany({
       include: {
         chapters: {
           include: {
@@ -253,6 +294,16 @@ export class BookService {
         },
       },
     });
+
+    // Add computed fields
+    return books.map(book => ({
+      ...book,
+      chapters: book.chapters.map(chapter => ({
+        ...chapter,
+        isFree: calculateIsFree(chapter.price),
+        finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
+      })) as any,
+    }));
   }
 
   static async verifyOwnership(bookId: string, userId: string): Promise<boolean> {

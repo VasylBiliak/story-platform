@@ -36,6 +36,7 @@ type ChapterInput = {
   price?: number;
   discount?: number;
   images: ChapterImage[];
+  discountError?: string;
 };
 
 type FormState = {
@@ -89,10 +90,6 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-function calculateFinalPrice(price: number, discount: number = 0): number {
-  const finalPrice = price * (1 - discount / 100);
-  return Math.max(0, Math.round(finalPrice * 100) / 100); // Round to 2 decimal places, clamp to >= 0
-}
 
 export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const router = useRouter();
@@ -137,6 +134,30 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     setForm((prev) => {
       const next = [...prev.chapters];
       next[index] = { ...next[index], [field]: safeValue };
+
+      // Reactive free chapter logic: if price is 0, set isFree to true
+      if (field === "price" && typeof safeValue === "number") {
+        if (safeValue === 0) {
+          next[index].isFree = true;
+        } else if (safeValue > 0 && next[index].isFree) {
+          next[index].isFree = false;
+        }
+      }
+
+      // Validate discount: must be between 0 and 100
+      if (field === "discount" && typeof safeValue === "number") {
+        if (safeValue < 0 || safeValue > 100) {
+          next[index].discountError = "Discount must be between 0 and 100";
+        } else {
+          next[index].discountError = undefined;
+        }
+      }
+
+      // Free chapters cannot have discount > 0
+      if (next[index].isFree && next[index].discount && next[index].discount > 0) {
+        next[index].discount = 0;
+      }
+
       return { ...prev, chapters: next };
     });
   };
@@ -226,8 +247,11 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         c.content.trim().length > 0 &&
         c.content.trim().length <= INPUT_LIMITS.chapterContent &&
         (c.isFree || (c.price !== undefined && c.price >= 0)) &&
-        (c.discount === undefined || (Number.isInteger(c.discount) && c.discount >= 0 && c.discount <= 999)) &&
-        c.images.every((img) => img.caption.trim().length <= INPUT_LIMITS.caption)
+        (c.discount === undefined || (Number.isInteger(c.discount) && c.discount >= 0 && c.discount <= 100)) &&
+        !c.discountError &&
+        c.images.every(
+          (img) => (img.caption?.trim().length ?? 0) <= INPUT_LIMITS.caption
+        )
     );
 
   const handleDelete = async () => {
@@ -266,10 +290,11 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         title: c.title.trim(),
         slug: slugify(c.title) || `chapter-${i + 1}`,
         content: c.content.trim(),
+        isFree: c.isFree,
         price: c.isFree ? 0 : (c.price ?? 0),
         discount: c.isFree ? 0 : (c.discount ?? 0),
         images: c.images.map((img) => ({
-          caption: img.caption,
+          caption: img.caption ?? "",
         })),
       })),
     };
@@ -477,7 +502,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                         </div>
                         <input
                           type="text"
-                          value={img.caption}
+                          value={img.caption ?? ""}
                           onChange={(e) => updateChapterImageCaption(index, i, e.target.value)}
                           maxLength={INPUT_LIMITS.caption}
                           placeholder="Enter caption..."
@@ -506,14 +531,21 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   <input
                     type="checkbox"
                     checked={chapter.isFree}
-                    onChange={(e) =>
-                      updateChapter(index, "isFree", e.target.checked)
-                    }
+                    onChange={(e) => {
+                      updateChapter(index, "isFree", e.target.checked);
+                      // When setting isFree, also update price accordingly
+                      if (e.target.checked) {
+                        updateChapter(index, "price", 0);
+                      }
+                    }}
                     className="w-4 h-4 accent-accent-primary"
                   />
                   <span className="text-sm text-text-secondary">
                     Free chapter
                   </span>
+                  {chapter.isFree && (
+                    <span className="text-xs text-accent-primary ml-2">(Price set to 0)</span>
+                  )}
                 </label>
               )}
 
@@ -542,25 +574,30 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                     <input
                       type="number"
                       min="0"
-                      max="999"
+                      max="100"
                       step="1"
                       value={chapter.discount ?? ""}
                       onChange={(e) =>
                         updateChapter(index, "discount", e.target.value)
                       }
-                      className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
+                      disabled={chapter.isFree}
+                      className={`w-full px-3 py-2 bg-bg-primary border rounded-md text-text-primary outline-none focus:border-accent-primary transition ${chapter.discountError ? 'border-red-500' : 'border-border'
+                        } ${chapter.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
                       placeholder="0"
                     />
+                    {chapter.discountError && (
+                      <p className="text-xs text-red-500 mt-1">{chapter.discountError}</p>
+                    )}
                   </div>
                 </div>
               )}
 
-              {!chapter.isFree && chapter.price !== undefined && (
+              {chapter.price !== undefined && chapter.price !== 0 && (
                 <div className="p-3 bg-bg-secondary rounded-lg border border-border">
                   <p className="text-sm text-text-secondary">
                     Final Price:{" "}
                     <span className="font-semibold text-accent-primary">
-                      ${calculateFinalPrice(chapter.price, chapter.discount || 0).toFixed(2)}
+                      ${(chapter.price * (1 - (chapter.discount || 0) / 100)).toFixed(2)}
                     </span>
                     {chapter.discount && chapter.discount > 0 && (
                       <>
