@@ -1,4 +1,5 @@
-import { uploadFile, uploadMultipleFiles, type UploadedFile } from "@/lib/upload";
+import { uploadFile, uploadMultipleFiles, validateFile } from "@/lib/upload";
+import type { UploadedFile } from "@/types";
 
 export class UploadService {
   static async uploadSingle(file: File): Promise<UploadedFile> {
@@ -37,7 +38,7 @@ export class UploadService {
     const errors: string[] = [];
 
     for (const file of files) {
-      const validation = this.validateFile(file);
+      const validation = validateFile(file);
       if (!validation.valid && validation.error) {
         errors.push(`${file.name}: ${validation.error}`);
       }
@@ -56,7 +57,7 @@ export class UploadService {
 
     chapterImages.forEach((images, chapterIndex) => {
       images.forEach((file, imageIndex) => {
-        const validation = this.validateFile(file);
+        const validation = validateFile(file);
         if (!validation.valid && validation.error) {
           errors.push(`Chapter ${chapterIndex + 1}, Image ${imageIndex + 1}: ${validation.error}`);
         }
@@ -67,26 +68,5 @@ export class UploadService {
       valid: errors.length === 0,
       errors,
     };
-  }
-
-  static validateFile(file: File): { valid: boolean; error?: string } {
-    const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return {
-        valid: false,
-        error: `Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}`,
-      };
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return {
-        valid: false,
-        error: `File too large. Maximum: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-      };
-    }
-
-    return { valid: true };
   }
 }

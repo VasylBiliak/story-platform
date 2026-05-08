@@ -1,4 +1,5 @@
 import { prisma } from "@/server/prisma";
+import type { User } from "@/types";
 
 export type CreateUserParams = {
   email: string;

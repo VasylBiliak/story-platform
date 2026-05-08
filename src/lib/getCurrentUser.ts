@@ -2,12 +2,9 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/server/prisma";
 import { getTokenFromRequest } from "@/server/middlewares/authMiddleware";
 import { verifyToken } from "@/lib/auth";
+import type { CurrentUser } from "@/types";
 
-export type CurrentUser = {
-  id: string;
-  email: string;
-  name: string | null;
-};
+export type { CurrentUser } from "@/types";
 
 export async function getCurrentUser(
   req: NextRequest

@@ -1,19 +1,29 @@
-import { Book, Chapter } from '@/lib/types';
+import { Book, Chapter } from "@/types";
 
+/**
+ * @deprecated Local storage is deprecated. Use API endpoints instead.
+ */
 export function getBooks(): Book[] {
-  // Mock storage is deprecated. Frontend should use API endpoints.
   return [];
 }
 
+/**
+ * @deprecated Local storage is deprecated. Use API endpoints instead.
+ */
 export function saveBooks(_books: Book[]): void {
   // Legacy local storage stub. Book persistence is handled by backend APIs.
 }
 
+/**
+ * @deprecated Local storage is deprecated. Use API endpoints instead.
+ */
 export function getChapters(): Chapter[] {
-  // Mock storage is deprecated. Frontend should use API endpoints.
   return [];
 }
 
+/**
+ * @deprecated Local storage is deprecated. Use API endpoints instead.
+ */
 export function saveChapters(_chapters: Chapter[]): void {
   // Legacy local storage stub. Chapter persistence is handled by backend APIs.
 }

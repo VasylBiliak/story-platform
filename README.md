@@ -1,5 +1,50 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Project Structure
+
+The project uses a modular Next.js App Router architecture with separated layers for 
+UI, API routes, services, validation, and database access. Business logic is extracted 
+into reusable service modules, while components are organized by feature for 
+scalability and maintainability.
+- `src/app` — routes and API endpoints
+- `src/components` — reusable UI and feature components
+- `src/lib` — services, validators, auth, uploads, helpers
+- `src/types` — shared TypeScript types
+- `src/server` — server-side services, controllers, repositories
+- `prisma` — database schema and migrations
+
+The project follows a clean layered architecture with clear separation of concerns: **controllers** handle HTTP requests, **services** contain business logic, **repositories** interact with the database, **validators** ensure input correctness, and **components** render the UI.
+
+```
+src/
+├── app/              # Next.js App Router pages and API route handlers
+├── components/       # Reusable UI components organized by feature
+├── lib/              # Shared utilities, client-side services, and helpers
+├── server/           # Server-side business logic (services, controllers, repositories)
+└── types/            # Shared TypeScript type definitions
+prisma/
+└── schema.prisma     # Single source of truth for database structure (DO NOT MODIFY)
+```
+
+## Architecture Layers
+
+- **Controllers** (`src/server/controllers/`) — Handle HTTP requests/responses and delegate to services
+- **Services** (`src/server/services/`) — Contain business logic and orchestrate operations
+- **Repositories** (`src/server/repositories/`) — Handle direct database operations via Prisma
+- **Validators** (`src/lib/validators/`) — Validate input data using Zod schemas
+- **Components** (`src/components/`) — Render UI with reusable building blocks
+
+### Important Files
+
+- `prisma/schema.prisma` — Database schema definition (single source of truth, never modify)
+- `src/server/prisma.ts` — Prisma client singleton instance
+- `src/server/middlewares/authMiddleware.ts` — Authentication middleware for protected routes
+- `src/server/services/bookService.ts` — Business logic for book CRUD operations
+- `src/server/services/pricingService.ts` — Price calculation and discount logic
+- `src/server/utils/api-response.ts` — Standardized API response helpers
+- `src/lib/validators/book.ts` — Book and chapter validation schemas
+- `src/app/api/**/route.ts` — API route handlers that call controllers
+
 ## Getting Started
 
 First, run the development server:

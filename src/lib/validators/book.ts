@@ -1,14 +1,18 @@
 import { z } from "zod";
 
 const chapterImageSchema = z.object({
+  id: z.string().optional(),
   url: z.string().optional(),
   caption: z
     .string()
     .max(200, "Caption must be less than 200 characters")
     .optional(),
+  _delete: z.boolean().optional(),
+  file: z.any().optional(),
 });
 
 const chapterSchema = z.object({
+  id: z.string().optional(),
   title: z
     .string()
     .min(1, "Chapter title is required")

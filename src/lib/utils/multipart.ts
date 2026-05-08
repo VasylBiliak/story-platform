@@ -1,6 +1,6 @@
-export interface ParsedChapterImages {
-  [chapterIndex: string]: File[];
-}
+import type { ParsedChapterImages } from "@/types";
+
+export type { ParsedChapterImages } from "@/types";
 
 export function parseChapterImages(formData: FormData): File[][] {
   const chapterImages: File[][] = [];

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Book, Chapter, ChapterImage } from "@/lib/types";
+import { Book, Chapter, ChapterImage } from "@/types";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
 import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Book, Chapter, ChapterImage } from "@/lib/types";
+import { Book, Chapter, ChapterImage } from "@/types";
 import { DEFAULT_IMG } from "@/data/books";
 
 interface Props {

@@ -1,12 +1,8 @@
 import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
+import type { AuthUser } from "@/types";
 
 export const AUTH_COOKIE_NAME = "auth_token";
-
-export type AuthUser = {
-  userId: string;
-  email: string;
-};
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 

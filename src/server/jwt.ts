@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import type { JwtPayload } from "@/types";
 
 const JWT_SECRET_VALUE = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "7d";
@@ -8,11 +9,6 @@ if (!JWT_SECRET_VALUE) {
 }
 
 const JWT_SECRET = JWT_SECRET_VALUE;
-
-export type JwtPayload = {
-  userId: string;
-  email: string;
-};
 
 export function signJwt(payload: JwtPayload) {
   return jwt.sign(payload, JWT_SECRET, {

@@ -1,6 +1,6 @@
 import { prisma } from "@/server/prisma";
 import type { BookCreateInput } from "@/lib/validators/book";
-import type { UploadedFile } from "@/lib/upload";
+import type { UploadedFile } from "@/types";
 import type { Chapter } from "@/lib/types";
 import { applyComputedPricing, applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 
@@ -144,7 +144,7 @@ export class BookService {
       console.log("[UPLOADED_IMAGES_COUNT]", uploadedChapterImages.map((imgs) => imgs.length));
 
       const book = await prisma.$transaction(async (tx) => {
-        // Step 1: Update Book
+        // Step 1: Update Book fields
         const updatedBook = await tx.book.update({
           where: { id: bookId },
           data: {
@@ -158,65 +158,155 @@ export class BookService {
 
         console.log("[BOOK_UPDATED]", updatedBook.id);
 
-        // Step 2: Delete existing chapters and images
-        await tx.chapterImage.deleteMany({
-          where: {
-            chapter: {
-              bookId: bookId,
-            },
-          },
+        // Step 2: Get existing chapters for synchronization
+        const existingChapters = await tx.chapter.findMany({
+          where: { bookId },
+          include: { images: true },
         });
+        console.log("[EXISTING_CHAPTERS_COUNT]", existingChapters.length);
 
-        await tx.chapter.deleteMany({
-          where: { bookId: bookId },
-        });
+        // Step 3: Process chapters
+        const incomingChapterIds = new Set<string>();
+        const payloadChapters = data.chapters || [];
 
-        console.log("[EXISTING_CHAPTERS_DELETED]");
+        for (let chapterIndex = 0; chapterIndex < payloadChapters.length; chapterIndex++) {
+          const chapter = payloadChapters[chapterIndex];
+          const uploadedImages = uploadedChapterImages[chapterIndex] || [];
 
-        // Step 3: Create new Chapters sequentially
-        const chapters = data.chapters || [];
-        const createdChapters = [];
+          console.log(`[CHAPTER_${chapterIndex}] Processing chapter "${chapter.title}", id: ${chapter.id || "NEW"}`);
 
-        for (let chapterIndex = 0; chapterIndex < chapters.length; chapterIndex++) {
-          const chapter = chapters[chapterIndex];
-          const chapterImages = uploadedChapterImages[chapterIndex] || [];
+          let chapterId: string;
 
-          console.log(`[CHAPTER_${chapterIndex}] Creating chapter "${chapter.title}" with ${chapterImages.length} images`);
+          if (chapter.id) {
+            // Update existing chapter
+            console.log(`[CHAPTER_${chapterIndex}_UPDATE]`, chapter.id);
+            incomingChapterIds.add(chapter.id);
 
-          const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
-          const createdChapter = await tx.chapter.create({
-            data: {
-              title: chapter.title,
-              content: chapter.content,
-              slug: chapter.slug,
-              price: normalized.price,
-              discount: normalized.discount,
-              bookId: updatedBook.id,
-            },
+            const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
+
+            await tx.chapter.update({
+              where: { id: chapter.id },
+              data: {
+                title: chapter.title,
+                slug: chapter.slug,
+                content: chapter.content,
+                price: normalized.price,
+                discount: normalized.discount,
+              },
+            });
+
+            chapterId = chapter.id;
+          } else {
+            // Create new chapter
+            console.log(`[CHAPTER_${chapterIndex}_CREATE]`, chapter.title);
+
+            const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
+
+            const newChapter = await tx.chapter.create({
+              data: {
+                title: chapter.title,
+                slug: chapter.slug,
+                content: chapter.content,
+                price: normalized.price,
+                discount: normalized.discount,
+                bookId: updatedBook.id,
+              },
+            });
+
+            chapterId = newChapter.id;
+            incomingChapterIds.add(chapterId);
+          }
+
+          // Step 4: Process chapter images
+          const existingImages = await tx.chapterImage.findMany({
+            where: { chapterId },
           });
+          console.log(`[CHAPTER_${chapterIndex}_EXISTING_IMAGES]`, existingImages.length);
 
-          console.log(`[CHAPTER_${chapterIndex}_CREATED]`, createdChapter.id);
+          const incomingImageIds = new Set<string>();
+          const chapterImages = chapter.images || [];
 
-          // Step 4: Create Chapter Images
+          // Track uploaded file index
+          let uploadedFileIndex = 0;
+
           for (let imageIndex = 0; imageIndex < chapterImages.length; imageIndex++) {
             const image = chapterImages[imageIndex];
-            const caption = chapter.images?.[imageIndex]?.caption || null;
 
-            console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}] Creating image`);
+            if (image._delete) {
+              // Skip deleted images (will be handled in cleanup)
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_SKIP_DELETE]`);
+              continue;
+            }
 
-            await tx.chapterImage.create({
-              data: {
-                url: image.url,
-                caption: caption,
-                chapterId: createdChapter.id,
+            if (image.id) {
+              // Update existing image caption
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_UPDATE]`, image.id);
+              incomingImageIds.add(image.id);
+
+              await tx.chapterImage.update({
+                where: { id: image.id },
+                data: {
+                  caption: image.caption || "",
+                },
+              });
+            } else if (image.file && uploadedFileIndex < uploadedImages.length) {
+              // Create new image from uploaded file
+              const uploadedFile = uploadedImages[uploadedFileIndex];
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE]`, uploadedFile.filename);
+
+              await tx.chapterImage.create({
+                data: {
+                  url: uploadedFile.url,
+                  caption: image.caption || "",
+                  chapterId,
+                },
+              });
+
+              uploadedFileIndex++;
+            } else if (image.url) {
+              // Create new image from URL (for legacy support)
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_URL]`);
+
+              await tx.chapterImage.create({
+                data: {
+                  url: image.url,
+                  caption: image.caption || "",
+                  chapterId,
+                },
+              });
+            }
+          }
+
+          // Step 5: Delete removed images
+          const imagesToDelete = existingImages.filter(
+            (img) => !incomingImageIds.has(img.id)
+          );
+          console.log(`[CHAPTER_${chapterIndex}_IMAGES_DELETE]`, imagesToDelete.length);
+
+          if (imagesToDelete.length > 0) {
+            await tx.chapterImage.deleteMany({
+              where: {
+                id: { in: imagesToDelete.map((img) => img.id) },
               },
             });
           }
-
-          createdChapters.push(createdChapter);
         }
 
-        // Fetch complete book with relations
+        // Step 6: Delete removed chapters
+        const chaptersToDelete = existingChapters.filter(
+          (ch) => !incomingChapterIds.has(ch.id)
+        );
+        console.log("[CHAPTERS_DELETE]", chaptersToDelete.length);
+
+        if (chaptersToDelete.length > 0) {
+          await tx.chapter.deleteMany({
+            where: {
+              id: { in: chaptersToDelete.map((ch) => ch.id) },
+            },
+          });
+        }
+
+        // Step 7: Fetch complete book with relations
         const bookWithRelations = await tx.book.findUnique({
           where: { id: updatedBook.id },
           include: {

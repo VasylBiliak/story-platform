@@ -1,12 +1,7 @@
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-
-export interface UploadedFile {
-  filename: string;
-  url: string;
-  path: string;
-}
+import type { UploadedFile } from "@/types";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -42,6 +37,12 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 
   return { valid: true };
 }
+
+export const UPLOAD_CONSTANTS = {
+  ALLOWED_TYPES,
+  MAX_FILE_SIZE,
+  MAX_FILE_SIZE_MB: MAX_FILE_SIZE / 1024 / 1024,
+} as const;
 
 export async function uploadFile(file: File): Promise<UploadedFile> {
   const validation = validateFile(file);

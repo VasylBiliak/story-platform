@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  message: string;
-  data?: T;
-}
+import type { ApiResponse } from "@/types";
+
+export { ApiResponse };
 
 export function successResponse<T>(
   message: string,

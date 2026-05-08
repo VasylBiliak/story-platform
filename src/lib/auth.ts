@@ -1,17 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import type { JwtPayload, User } from "@/types";
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
-
-export type JwtPayload = {
-  userId: string;
-  email: string;
-};
-
-export type User = {
-  name: string;
-  email: string;
-};
 
 export function logAuthAction(action: string, data: Record<string, unknown>) {
   console.log({

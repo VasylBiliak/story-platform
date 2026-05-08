@@ -1,6 +1,6 @@
 import { prisma } from "@/server/prisma";
 import type { ChapterCreateInput } from "@/lib/validators/chapter";
-import type { UploadedFile } from "@/lib/upload";
+import type { UploadedFile } from "@/types";
 import type { Chapter } from "@/lib/types";
 import { applyComputedPricing, applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 

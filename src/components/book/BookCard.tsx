@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Book } from '@/lib/types';
+import { Book } from "@/types";
 import { DEFAULT_IMG } from "@/data/books";
 
 type ExtendedBook = Book & { isLocal?: boolean };
