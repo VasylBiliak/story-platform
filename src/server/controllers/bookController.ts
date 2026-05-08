@@ -120,22 +120,23 @@ export async function updateBookHandler(req: NextRequest, bookId: string) {
 
       // Extract uploaded chapter images
       const chapters = body.chapters || [];
-      uploadedChapterImages = chapters.map((chapter: any, index: number) => {
-        const images: File[] = [];
-        const chapterImages = chapter.images || [];
-        
-        for (let i = 0; i < chapterImages.length; i++) {
-          const image = chapterImages[i];
-          if (image.file !== undefined) {
-            const file = formData.get(`chapter_${index}_image_${i}`) as File;
-            if (file) {
-              images.push(file);
-            }
-          }
-        }
-        
-        return images;
-      });
+uploadedChapterImages = chapters.map((chapter: any, chapterIndex: number) => {
+  const images: File[] = [];
+
+  const chapterImages = chapter.images || [];
+
+  for (let imageIndex = 0; imageIndex < chapterImages.length; imageIndex++) {
+    const file = formData.get(
+      `chapterImages_${chapterIndex}_${imageIndex}`
+    );
+
+    if (file instanceof File && file.size > 0) {
+      images.push(file);
+    }
+  }
+
+  return images;
+});
       
       console.log("[BOOK_CONTROLLER] Extracted uploaded images:", uploadedChapterImages.map(imgs => imgs.length));
     } else if (contentType.includes("application/json")) {
