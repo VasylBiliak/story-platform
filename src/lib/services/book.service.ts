@@ -2,15 +2,7 @@ import { prisma } from "@/server/prisma";
 import type { BookCreateInput } from "@/lib/validators/book";
 import type { UploadedFile } from "@/lib/upload";
 import type { Chapter } from "@/lib/types";
-
-function calculateFinalPrice(price: number, discount: number = 0): number {
-  const finalPrice = price * (1 - discount / 100);
-  return Math.max(0, Math.round(finalPrice * 100) / 100);
-}
-
-function calculateIsFree(price: number): boolean {
-  return price === 0;
-}
+import { applyComputedPricing, applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 
 export class BookService {
   static async createBookWithChapters(
@@ -96,11 +88,7 @@ export class BookService {
         
         // Add computed fields
         if (bookWithRelations) {
-          bookWithRelations.chapters = bookWithRelations.chapters.map(chapter => ({
-            ...chapter,
-            isFree: calculateIsFree(chapter.price),
-            finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-          })) as any;
+          bookWithRelations.chapters = applyComputedPricingToChapters(bookWithRelations.chapters) as any;
         }
         
         return bookWithRelations;
@@ -195,13 +183,14 @@ export class BookService {
 
           console.log(`[CHAPTER_${chapterIndex}] Creating chapter "${chapter.title}" with ${chapterImages.length} images`);
 
+          const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
           const createdChapter = await tx.chapter.create({
             data: {
               title: chapter.title,
               content: chapter.content,
               slug: chapter.slug,
-              price: chapter.price ?? 0,
-              discount: chapter.discount ?? 0,
+              price: normalized.price,
+              discount: normalized.discount,
               bookId: updatedBook.id,
             },
           });
@@ -243,11 +232,7 @@ export class BookService {
         
         // Add computed fields
         if (bookWithRelations) {
-          bookWithRelations.chapters = bookWithRelations.chapters.map(chapter => ({
-            ...chapter,
-            isFree: calculateIsFree(chapter.price),
-            finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-          })) as any;
+          bookWithRelations.chapters = applyComputedPricingToChapters(bookWithRelations.chapters) as any;
         }
         
         return bookWithRelations;
@@ -275,11 +260,7 @@ export class BookService {
     if (!book) return null;
 
     // Add computed fields
-    book.chapters = book.chapters.map(chapter => ({
-      ...chapter,
-      isFree: calculateIsFree(chapter.price),
-      finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-    })) as any;
+    book.chapters = applyComputedPricingToChapters(book.chapters) as any;
 
     return book;
   }
@@ -298,11 +279,7 @@ export class BookService {
     // Add computed fields
     return books.map(book => ({
       ...book,
-      chapters: book.chapters.map(chapter => ({
-        ...chapter,
-        isFree: calculateIsFree(chapter.price),
-        finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-      })) as any,
+      chapters: applyComputedPricingToChapters(book.chapters) as any,
     }));
   }
 

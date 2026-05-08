@@ -595,21 +595,21 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
               {chapter.price !== undefined && chapter.price !== 0 && (
                 <div className="p-3 bg-bg-secondary rounded-lg border border-border">
                   <p className="text-sm text-text-secondary">
-                    Final Price:{" "}
+                    Base Price:{" "}
                     <span className="font-semibold text-accent-primary">
-                      ${(chapter.price * (1 - (chapter.discount || 0) / 100)).toFixed(2)}
+                      ${chapter.price.toFixed(2)}
                     </span>
                     {chapter.discount && chapter.discount > 0 && (
                       <>
                         {" "}
-                        <span className="text-text-tertiary line-through">
-                          ${chapter.price.toFixed(2)}
-                        </span>
                         <span className="ml-2 text-text-tertiary">
-                          -{chapter.discount}%
+                          -{chapter.discount}% discount
                         </span>
                       </>
                     )}
+                    <span className="text-xs text-text-tertiary ml-2">
+                      (Final price calculated by backend)
+                    </span>
                   </p>
                 </div>
               )}

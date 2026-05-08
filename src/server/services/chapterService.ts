@@ -1,13 +1,5 @@
 import { prisma } from "@/server/prisma";
-
-function calculateFinalPrice(price: number, discount: number = 0): number {
-  const finalPrice = price * (1 - discount / 100);
-  return Math.max(0, Math.round(finalPrice * 100) / 100);
-}
-
-function calculateIsFree(price: number): boolean {
-  return price === 0;
-}
+import { applyComputedPricing, applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 
 export async function getChapters(bookId?: string, slug?: string) {
   const chapters = await prisma.chapter.findMany({
@@ -20,11 +12,7 @@ export async function getChapters(bookId?: string, slug?: string) {
     },
   });
 
-  return chapters.map((chapter) => ({
-    ...chapter,
-    isFree: calculateIsFree(chapter.price),
-    finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-  }));
+  return applyComputedPricingToChapters(chapters);
 }
 
 export async function getChapterBySlug(bookId: string, slug: string) {
@@ -40,11 +28,7 @@ export async function getChapterBySlug(bookId: string, slug: string) {
 
   if (!chapter) return null;
 
-  return {
-    ...chapter,
-    isFree: calculateIsFree(chapter.price),
-    finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-  };
+  return applyComputedPricing(chapter);
 }
 
 export async function createChapter(
@@ -55,22 +39,21 @@ export async function createChapter(
     slug: string;
     price?: number;
     isFree?: boolean;
+    discount?: number;
   }
 ) {
+  const normalized = normalizeChapterPricing(payload.isFree, payload.price, payload.discount);
+
   const chapter = await prisma.chapter.create({
     data: {
       title: payload.title,
       content: payload.content,
       slug: payload.slug,
       bookId,
-      price: payload.isFree ? 0 : payload.price ?? 0,
+      price: normalized.price,
+      discount: normalized.discount,
     },
   });
 
-  return {
-    ...chapter,
-    isFree: calculateIsFree(chapter.price),
-    finalPrice: calculateFinalPrice(chapter.price, chapter.discount || 0),
-  };
+  return applyComputedPricing(chapter);
 }
-

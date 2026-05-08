@@ -83,17 +83,14 @@ export async function createBook(
       chapters: payload.chapters
         ? {
             create: payload.chapters.map((chapter) => {
-              // If isFree is provided, use it to determine price; otherwise use price directly
-              const price = chapter.isFree ? 0 : chapter.price ?? 0;
-              const discount = chapter.isFree ? 0 : chapter.discount ?? 0;
+              const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
 
               return {
                 title: chapter.title,
                 slug: chapter.slug,
                 content: chapter.content,
-                price,
-                discount,
-
+                price: normalized.price,
+                discount: normalized.discount,
                 images: chapter.images
                   ? {
                       create: chapter.images.map((img) => ({
@@ -192,8 +189,7 @@ export async function updateBook(
         console.log(`[CHAPTER_${chapterIndex}_UPDATE]`, chapter.id);
         incomingChapterIds.add(chapter.id);
 
-        const price = chapter.isFree ? 0 : chapter.price ?? 0;
-        const discount = chapter.isFree ? 0 : chapter.discount ?? 0;
+        const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
 
         await tx.chapter.update({
           where: { id: chapter.id },
@@ -201,8 +197,8 @@ export async function updateBook(
             title: chapter.title,
             slug: chapter.slug,
             content: chapter.content,
-            price,
-            discount,
+            price: normalized.price,
+            discount: normalized.discount,
           },
         });
 
@@ -211,16 +207,15 @@ export async function updateBook(
         // Create new chapter
         console.log(`[CHAPTER_${chapterIndex}_CREATE]`, chapter.title);
 
-        const price = chapter.isFree ? 0 : chapter.price ?? 0;
-        const discount = chapter.isFree ? 0 : chapter.discount ?? 0;
+        const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
 
         const newChapter = await tx.chapter.create({
           data: {
             title: chapter.title,
             slug: chapter.slug,
             content: chapter.content,
-            price,
-            discount,
+            price: normalized.price,
+            discount: normalized.discount,
             bookId: updatedBook.id,
           },
         });
