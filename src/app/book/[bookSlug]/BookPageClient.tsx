@@ -158,7 +158,10 @@ export default function BookPageClient() {
         {chapters.length > 0 ? (
           <div className="space-y-3">
             {chapters.map((chapter) => (
-              <ChapterListItem key={chapter.id} chapter={chapter} bookSlug={book.id} />
+              <ChapterListItem key={chapter.id} 
+              chapter={chapter} 
+              bookSlug={book.id} 
+              />
             ))}
           </div>
         ) : (
