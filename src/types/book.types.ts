@@ -3,8 +3,9 @@
  */
 
 export interface ChapterImage {
-  url: string; // base64
-  caption: string;
+  id?: string;
+  url: string; // base64 or file path
+  caption?: string;
 }
 
 export interface Book {

@@ -201,7 +201,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     const toProcess = Array.from(files).slice(0, remainingSlots);
     try {
       const base64s = await Promise.all(toProcess.map(fileToBase64));
-      const newImages: ChapterImage[] = base64s.map((url) => ({ url, caption: "" }));
+      const newImages: ChapterImage[] = base64s.map((url) => ({ id: crypto.randomUUID(), url, caption: "" }));
       setForm((prev) => {
         const next = [...prev.chapters];
         next[chapterIndex] = { ...next[chapterIndex], images: [...next[chapterIndex].images, ...newImages] };

@@ -8,6 +8,7 @@ import { Paywall } from "@/components/chapter/Paywall";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
 import { ChapterNavigation } from "@/components/chapterNavigation/ChapterNavigation";
+import ChapterImages from "@/components/chapterImages/ChapterImages";
 
 export default function ChapterPageClient() {
   const params = useParams();
@@ -179,24 +180,7 @@ export default function ChapterPageClient() {
               ))}
             </div>
 
-            {chapter.images && chapter.images.length > 0 && (
-              <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {chapter.images.map((img, i) => (
-                  <figure key={i} className="space-y-2">
-                    <img
-                      src={img.url}
-                      alt={`Chapter image ${i + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border border-border"
-                    />
-                    {img.caption && (
-                      <figcaption className="text-xs text-accent-primary text-center">
-                        {img.caption}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
-              </div>
-            )}
+            <ChapterImages images={chapter.images || []} />
 
             <div className="mt-12 pt-8 border-t border-border">
               <div className="bg-accent-primary/10 rounded-lg p-6 text-center">
