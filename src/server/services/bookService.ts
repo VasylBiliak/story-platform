@@ -1,14 +1,6 @@
 import { prisma } from "@/server/prisma";
 import { applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
-
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+import { replaceChapterImages } from "@/server/repositories/book/book.images";
 
 export async function getBooks() {
   const books = await prisma.book.findMany({
@@ -226,87 +218,13 @@ export async function updateBook(
       }
 
       // Step 4: Replace chapter images completely
-
-      console.log(
-        `[CHAPTER_${chapterIndex}_IMAGES_REPLACE_START]`,
-        chapterId
-      );
-
-      // Delete all existing images for chapter
-      await tx.chapterImage.deleteMany({
-        where: { chapterId },
+      await replaceChapterImages({
+        tx,
+        chapterId,
+        chapterIndex,
+        chapterImages: chapter.images,
+        uploadedImages,
       });
-
-      console.log(
-        `[CHAPTER_${chapterIndex}_IMAGES_DELETED_ALL]`
-      );
-
-      const chapterImages = chapter.images || [];
-
-      // Track uploaded file index
-      let uploadedFileIndex = 0;
-
-      for (
-        let imageIndex = 0;
-        imageIndex < chapterImages.length;
-        imageIndex++
-      ) {
-        const image = chapterImages[imageIndex];
-
-        if (image._delete) {
-          console.log(
-            `[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_SKIP_DELETE]`
-          );
-          continue;
-        }
-
-        // Create image from uploaded file
-        if (
-          image.file &&
-          uploadedFileIndex < uploadedImages.length
-        ) {
-          const uploadedFile =
-            uploadedImages[uploadedFileIndex];
-
-          console.log(
-            `[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_FILE]`,
-            uploadedFile.name
-          );
-
-          const base64 =
-            await fileToBase64(uploadedFile);
-
-          await tx.chapterImage.create({
-            data: {
-              url: base64,
-              caption: image.caption || "",
-              chapterId,
-            },
-          });
-
-          uploadedFileIndex++;
-          continue;
-        }
-
-        // Re-create existing image from URL
-        if (image.url) {
-          console.log(
-            `[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_URL]`
-          );
-
-          await tx.chapterImage.create({
-            data: {
-              url: image.url,
-              caption: image.caption || "",
-              chapterId,
-            },
-          });
-        }
-      }
-
-      console.log(
-        `[CHAPTER_${chapterIndex}_IMAGES_REPLACE_DONE]`
-      );
     }
 
 
