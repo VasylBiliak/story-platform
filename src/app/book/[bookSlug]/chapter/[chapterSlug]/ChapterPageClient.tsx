@@ -111,6 +111,7 @@ export default function ChapterPageClient() {
         <span className="text-text-primary truncate max-w-xs">{chapter.title}</span>
       </nav>
 
+
       {/* Chapter Header */}
       <header className="mb-8">
         <div className="flex items-center justify-between mb-4">
