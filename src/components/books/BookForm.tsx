@@ -30,6 +30,7 @@ function slugify(text: string): string {
 }
 
 type ChapterInput = {
+  id?: string; // Add optional id for existing chapters
   title: string;
   content: string;
   isFree: boolean;
@@ -287,6 +288,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       description: form.book.description.trim(),
       cover: form.book.cover.trim(),
       chapters: form.chapters.map((c, i) => ({
+        ...(c.id && { id: c.id }), // CRITICAL: Send chapter.id for existing chapters only
         title: c.title.trim(),
         slug: slugify(c.title) || `chapter-${i + 1}`,
         content: c.content.trim(),
@@ -294,6 +296,8 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         price: c.isFree ? 0 : (c.price ?? 0),
         discount: c.isFree ? 0 : (c.discount ?? 0),
         images: c.images.map((img) => ({
+          ...(img.id && { id: img.id }), // CRITICAL: Send image.id for existing images only
+          url: img.url,
           caption: img.caption ?? "",
         })),
       })),

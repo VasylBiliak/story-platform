@@ -9,6 +9,8 @@ export async function createChapterRepository(
   bookId: string,
   data: CreateChapterDto
 ): Promise<ChapterWithImages> {
+  console.log("[CREATE_CHAPTER_REPOSITORY] Input:", { bookId, data });
+
   const chapter = await prisma.chapter.create({
     data: {
       title: data.title,
@@ -31,6 +33,7 @@ export async function createChapterRepository(
     },
   });
 
+  console.log("[CREATE_CHAPTER_REPOSITORY] Result:", chapter);
   return chapter as ChapterWithImages;
 }
 
@@ -38,38 +41,30 @@ export async function updateChapterRepository(
   chapterId: string,
   data: UpdateChapterDto
 ): Promise<ChapterWithImages> {
-  const chapter = await prisma.$transaction(async (tx) => {
-    // Delete existing images if new images are provided
-    if (data.images !== undefined) {
-      await tx.chapterImage.deleteMany({
-        where: { chapterId },
-      });
-    }
+  const chapter = await prisma.chapter.update({
+    where: { id: chapterId },
+    data: {
+      title: data.title,
+      content: data.content,
+      slug: data.slug,
+      price: data.price,
+      discount: data.discount,
 
-    // Update chapter
-    const updated = await tx.chapter.update({
-      where: { id: chapterId },
-      data: {
-        title: data.title,
-        content: data.content,
-        slug: data.slug,
-        price: data.price,
-        discount: data.discount,
-        images: data.images && data.images.length > 0
-          ? {
-              create: data.images.map((img) => ({
-                url: img.url,
-                caption: img.caption,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        images: true,
-      },
-    });
-
-    return updated;
+      ...(data.images !== undefined && {
+        images: {
+          deleteMany: {},
+          ...(data.images.length > 0 && {
+            create: data.images.map((img) => ({
+              url: img.url,
+              caption: img.caption,
+            })),
+          }),
+        },
+      }),
+    },
+    include: {
+      images: true,
+    },
   });
 
   return chapter as ChapterWithImages;

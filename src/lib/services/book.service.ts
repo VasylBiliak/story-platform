@@ -140,6 +140,7 @@ export class BookService {
     authorName: string
   ) {
     try {
+      console.log("[BOOK_UPDATE_START]", { bookId, chaptersCount: data.chapters?.length });
       console.log("[BOOK_UPDATE_PAYLOAD]", JSON.stringify(data, null, 2));
       console.log("[UPLOADED_IMAGES_COUNT]", uploadedChapterImages.map((imgs) => imgs.length));
 
@@ -174,6 +175,8 @@ export class BookService {
           const uploadedImages = uploadedChapterImages[chapterIndex] || [];
 
           console.log(`[CHAPTER_${chapterIndex}] Processing chapter "${chapter.title}", id: ${chapter.id || "NEW"}`);
+          console.log(`[CHAPTER_${chapterIndex}] Images in payload: ${chapter.images?.length || 0}`);
+          console.log(`[CHAPTER_${chapterIndex}] Uploaded files: ${uploadedImages.length}`);
 
           let chapterId: string;
 
@@ -217,14 +220,23 @@ export class BookService {
             incomingChapterIds.add(chapterId);
           }
 
-          // Step 4: Process chapter images
+          // Step 4: Process chapter images - SAFE RECONCILIATION
           const existingImages = await tx.chapterImage.findMany({
             where: { chapterId },
           });
           console.log(`[CHAPTER_${chapterIndex}_EXISTING_IMAGES]`, existingImages.length);
 
+          // Build map of existing DB images for O(1) lookup
+          const existingImagesMap = new Map(existingImages.map(img => [img.id, img]));
+
           const incomingImageIds = new Set<string>();
           const chapterImages = chapter.images || [];
+
+          // Classification counters for debug logging
+          let imagesToCreate = 0;
+          let imagesToUpdate = 0;
+          let imagesToSkip = 0;
+          let imagesToDeleteMarked = 0;
 
           // Track uploaded file index
           let uploadedFileIndex = 0;
@@ -233,26 +245,38 @@ export class BookService {
             const image = chapterImages[imageIndex];
 
             if (image._delete) {
-              // Skip deleted images (will be handled in cleanup)
-              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_SKIP_DELETE]`);
+              // Mark for deletion - don't add to incomingImageIds
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_DELETE_MARKED]`, image.id || "no-id");
+              imagesToDeleteMarked++;
               continue;
             }
 
             if (image.id) {
-              // Update existing image caption
-              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_UPDATE]`, image.id);
-              incomingImageIds.add(image.id);
+              // SAFE UPDATE: Only update if image exists in DB
+              const existing = existingImagesMap.get(image.id);
 
+              if (!existing) {
+                // Image ID from frontend doesn't exist in DB - skip safely
+                console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_SKIP_MISSING_DB]`, image.id);
+                imagesToSkip++;
+                continue;
+              }
+
+              // Image exists - safe to update caption
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_UPDATE]`, image.id);
               await tx.chapterImage.update({
                 where: { id: image.id },
                 data: {
                   caption: image.caption || "",
                 },
               });
+
+              incomingImageIds.add(image.id);
+              imagesToUpdate++;
             } else if (image.file && uploadedFileIndex < uploadedImages.length) {
               // Create new image from uploaded file
               const uploadedFile = uploadedImages[uploadedFileIndex];
-              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE]`, uploadedFile.filename);
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_FILE]`, uploadedFile.filename);
 
               await tx.chapterImage.create({
                 data: {
@@ -263,9 +287,10 @@ export class BookService {
               });
 
               uploadedFileIndex++;
+              imagesToCreate++;
             } else if (image.url) {
               // Create new image from URL (for legacy support)
-              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_URL]`);
+              console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_URL]`, image.url.substring(0, 50) + "...");
 
               await tx.chapterImage.create({
                 data: {
@@ -274,8 +299,20 @@ export class BookService {
                   chapterId,
                 },
               });
+
+              imagesToCreate++;
             }
           }
+
+          // Log classification summary
+          console.log(`[CHAPTER_${chapterIndex}_IMAGE_SYNC_SUMMARY]`, {
+            existing: existingImages.length,
+            create: imagesToCreate,
+            update: imagesToUpdate,
+            skip: imagesToSkip,
+            deleteMarked: imagesToDeleteMarked,
+            keep: incomingImageIds.size,
+          });
 
           // Step 5: Delete removed images
           const imagesToDelete = existingImages.filter(

@@ -6,7 +6,7 @@ import { NotFoundError } from "@/server/core/errors/AppError";
 import { parseChapterRequest } from "./chapter.parser";
 import { validateCreateChapterPayload, validateUpdateChapterPayload } from "./chapter.validation";
 import { ensureChapterOwner, ensureChapterExists } from "./chapter.permissions";
-import { mapToCreateWithImages, mapToUpdateWithImages, mapUploadedFilesToImageDtos } from "./chapter.mapper";
+import { mapUploadedFilesToImageDtos } from "./chapter.mapper";
 import {
   createChapterRepository,
   updateChapterRepository,
@@ -26,20 +26,24 @@ export async function createChapterService(
   data: CreateChapterDto,
   uploadedImages?: File[]
 ): Promise<ChapterWithImages> {
+  console.log("[CREATE_CHAPTER_SERVICE] Input:", { bookId, data, uploadedImagesCount: uploadedImages?.length });
+
   // Upload images if provided
   let imagesDto = data.images;
   if (uploadedImages && uploadedImages.length > 0) {
+    console.log("[CREATE_CHAPTER_SERVICE] Uploading images:", uploadedImages.length);
     const uploaded = await uploadMultipleFiles(uploadedImages);
+    console.log("[CREATE_CHAPTER_SERVICE] Uploaded files:", uploaded);
     const captions = data.images?.map((img) => img.caption).filter((c): c is string => c !== undefined);
     imagesDto = mapUploadedFilesToImageDtos(uploaded, captions);
+    console.log("[CREATE_CHAPTER_SERVICE] Mapped image DTOs:", imagesDto);
   }
 
-  const createData = mapToCreateWithImages(
-    { ...data, images: imagesDto },
-    uploadedImages ? await uploadMultipleFiles(uploadedImages) : undefined
-  );
+  const createData = { ...data, images: imagesDto };
+  console.log("[CREATE_CHAPTER_SERVICE] Repository input:", createData);
 
   const chapter = await createChapterRepository(bookId, createData);
+  console.log("[CREATE_CHAPTER_SERVICE] Result:", chapter);
   return chapter;
 }
 
@@ -51,22 +55,46 @@ export async function updateChapterService(
   data: UpdateChapterDto,
   uploadedImages?: File[]
 ): Promise<ChapterWithImages> {
+  console.log("[UPDATE_CHAPTER_SERVICE] Input:", { chapterId, data, uploadedImagesCount: uploadedImages?.length });
+
   await ensureChapterExists(chapterId);
 
-  // Upload images if provided
-  let imagesDto = data.images;
+  let uploaded;
+
+  // Upload images once
   if (uploadedImages && uploadedImages.length > 0) {
-    const uploaded = await uploadMultipleFiles(uploadedImages);
-    const captions = data.images?.map((img) => img.caption).filter((c): c is string => c !== undefined);
-    imagesDto = mapUploadedFilesToImageDtos(uploaded, captions);
+    console.log("[UPDATE_CHAPTER_SERVICE] Uploading images:", uploadedImages.length);
+    uploaded = await uploadMultipleFiles(uploadedImages);
+    console.log("[UPDATE_CHAPTER_SERVICE] Uploaded files:", uploaded);
   }
 
-  const updateData = mapToUpdateWithImages(
-    { ...data, images: imagesDto },
-    uploadedImages ? await uploadMultipleFiles(uploadedImages) : undefined
+  const captions = data.images
+    ?.map((img) => img.caption)
+    .filter((c): c is string => c !== undefined);
+
+  const imagesDto = uploaded
+    ? mapUploadedFilesToImageDtos(uploaded, captions)
+    : data.images;
+
+  console.log("[UPDATE_CHAPTER_SERVICE] Image DTOs:", imagesDto);
+
+  const updateData = {
+    ...data,
+    images: imagesDto,
+  };
+
+  console.log("[UPDATE_CHAPTER_SERVICE] Repository input:", updateData);
+
+  const chapter = await updateChapterRepository(
+    chapterId,
+    updateData
   );
 
-  const chapter = await updateChapterRepository(chapterId, updateData);
+  console.log(
+    "[UPDATE_CHAPTER_SERVICE] Result:",
+    chapter
+  );
+
   return chapter;
 }
 

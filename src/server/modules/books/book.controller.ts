@@ -65,6 +65,7 @@ export async function createBookHandler(req: NextRequest) {
 }
 
 export async function updateBookHandler(req: NextRequest, bookId: string) {
+  console.log("[BookController] updateBookHandler", bookId, '---', req.method, '---', req);
   try {
     const book = await updateBookService(req, bookId);
     return successResponse(book);

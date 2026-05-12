@@ -82,26 +82,26 @@ export async function createBook(
 
       chapters: payload.chapters
         ? {
-            create: payload.chapters.map((chapter) => {
-              const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
+          create: payload.chapters.map((chapter) => {
+            const normalized = normalizeChapterPricing(chapter.isFree, chapter.price, chapter.discount);
 
-              return {
-                title: chapter.title,
-                slug: chapter.slug,
-                content: chapter.content,
-                price: normalized.price,
-                discount: normalized.discount,
-                images: chapter.images
-                  ? {
-                      create: chapter.images.map((img) => ({
-                        url: img.url,
-                        caption: img.caption || "",
-                      })),
-                    }
-                  : undefined,
-              };
-            }),
-          }
+            return {
+              title: chapter.title,
+              slug: chapter.slug,
+              content: chapter.content,
+              price: normalized.price,
+              discount: normalized.discount,
+              images: chapter.images
+                ? {
+                  create: chapter.images.map((img) => ({
+                    url: img.url,
+                    caption: img.caption || "",
+                  })),
+                }
+                : undefined,
+            };
+          }),
+        }
         : undefined,
     },
     include: {
@@ -136,16 +136,15 @@ export async function updateBook(
       price?: number;
       discount?: number;
       images?: Array<{
-        id?: string;
         url?: string;
         file?: File;
         caption?: string;
-        _delete?: boolean;
       }>;
     }>;
   },
   uploadedChapterImages?: File[][]
 ) {
+  console.log("[BOOK_UPDATE_START]", { bookId, chaptersCount: payload.chapters?.length });
   console.log("[BOOK_UPDATE_PAYLOAD]", JSON.stringify(payload, null, 2));
   console.log("[UPLOADED_IMAGES_COUNT]", uploadedChapterImages?.map((imgs) => imgs.length));
 
@@ -181,6 +180,8 @@ export async function updateBook(
       const uploadedImages = uploadedChapterImages?.[chapterIndex] || [];
 
       console.log(`[CHAPTER_${chapterIndex}] Processing chapter "${chapter.title}", id: ${chapter.id || "NEW"}`);
+      console.log(`[CHAPTER_${chapterIndex}] Images in payload: ${chapter.images?.length || 0}`);
+      console.log(`[CHAPTER_${chapterIndex}] Uploaded files: ${uploadedImages.length}`);
 
       let chapterId: string;
 
@@ -224,45 +225,56 @@ export async function updateBook(
         incomingChapterIds.add(chapterId);
       }
 
-      // Step 4: Process chapter images
-      const existingImages = await tx.chapterImage.findMany({
+      // Step 4: Replace chapter images completely
+
+      console.log(
+        `[CHAPTER_${chapterIndex}_IMAGES_REPLACE_START]`,
+        chapterId
+      );
+
+      // Delete all existing images for chapter
+      await tx.chapterImage.deleteMany({
         where: { chapterId },
       });
-      console.log(`[CHAPTER_${chapterIndex}_EXISTING_IMAGES]`, existingImages.length);
 
-      const incomingImageIds = new Set<string>();
+      console.log(
+        `[CHAPTER_${chapterIndex}_IMAGES_DELETED_ALL]`
+      );
+
       const chapterImages = chapter.images || [];
 
       // Track uploaded file index
       let uploadedFileIndex = 0;
 
-      for (let imageIndex = 0; imageIndex < chapterImages.length; imageIndex++) {
+      for (
+        let imageIndex = 0;
+        imageIndex < chapterImages.length;
+        imageIndex++
+      ) {
         const image = chapterImages[imageIndex];
 
         if (image._delete) {
-          // Skip deleted images (will be handled in cleanup)
-          console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_SKIP_DELETE]`);
+          console.log(
+            `[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_SKIP_DELETE]`
+          );
           continue;
         }
 
-        if (image.id) {
-          // Update existing image caption
-          console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_UPDATE]`, image.id);
-          incomingImageIds.add(image.id);
+        // Create image from uploaded file
+        if (
+          image.file &&
+          uploadedFileIndex < uploadedImages.length
+        ) {
+          const uploadedFile =
+            uploadedImages[uploadedFileIndex];
 
-          await tx.chapterImage.update({
-            where: { id: image.id },
-            data: {
-              caption: image.caption || "",
-            },
-          });
-        } else if (image.file && uploadedFileIndex < uploadedImages.length) {
-          // Create new image from uploaded file
-          const uploadedFile = uploadedImages[uploadedFileIndex];
-          console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE]`, uploadedFile.name);
+          console.log(
+            `[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_FILE]`,
+            uploadedFile.name
+          );
 
-          // Convert file to base64
-          const base64 = await fileToBase64(uploadedFile);
+          const base64 =
+            await fileToBase64(uploadedFile);
 
           await tx.chapterImage.create({
             data: {
@@ -273,9 +285,14 @@ export async function updateBook(
           });
 
           uploadedFileIndex++;
-        } else if (image.url) {
-          // Create new image from URL (for legacy support)
-          console.log(`[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_URL]`);
+          continue;
+        }
+
+        // Re-create existing image from URL
+        if (image.url) {
+          console.log(
+            `[CHAPTER_${chapterIndex}_IMAGE_${imageIndex}_CREATE_URL]`
+          );
 
           await tx.chapterImage.create({
             data: {
@@ -287,20 +304,11 @@ export async function updateBook(
         }
       }
 
-      // Step 5: Delete removed images
-      const imagesToDelete = existingImages.filter(
-        (img) => !incomingImageIds.has(img.id)
+      console.log(
+        `[CHAPTER_${chapterIndex}_IMAGES_REPLACE_DONE]`
       );
-      console.log(`[CHAPTER_${chapterIndex}_IMAGES_DELETE]`, imagesToDelete.length);
-
-      if (imagesToDelete.length > 0) {
-        await tx.chapterImage.deleteMany({
-          where: {
-            id: { in: imagesToDelete.map((img) => img.id) },
-          },
-        });
-      }
     }
+
 
     // Step 6: Delete removed chapters
     const chaptersToDelete = existingChapters.filter(
@@ -336,7 +344,7 @@ export async function updateBook(
   if (!book) {
     throw new Error("Book not found after update");
   }
-  
+
   return {
     ...book,
     chapters: applyComputedPricingToChapters(book.chapters) as any,
