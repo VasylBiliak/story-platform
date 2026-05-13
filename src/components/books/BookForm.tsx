@@ -7,6 +7,8 @@ import { Book, Chapter, ChapterImage } from "@/types";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
 import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
+import { mapFormToLocalBook, updateLocalBookFromForm } from "@/lib/local-books/localBookMapper";
 
 
 export type BookFormMode = "create" | "edit";
@@ -95,6 +97,7 @@ function fileToBase64(file: File): Promise<string> {
 export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { createLocalBook, updateLocalBook: updateLocalBookState, removeLocalBook, isLocalBook } = useLocalBooks();
   const [form, setForm] = useState<FormState>(() =>
     createInitialState(initialData?.book, initialData?.chapters)
   );
@@ -102,6 +105,15 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [createLocally, setCreateLocally] = useState(false);
+
+  // Check if editing a local book
+  useEffect(() => {
+    if (mode === "edit" && initialData?.book) {
+      const isLocal = isLocalBook(initialData.book.id);
+      setCreateLocally(isLocal);
+    }
+  }, [mode, initialData, isLocalBook]);
 
   async function getAuthHeaders(): Promise<Record<string, string>> {
     // Token is automatically sent via HTTP-only cookie
@@ -260,6 +272,13 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     const bookId = initialData.book.id;
     setApiError(null);
 
+    // Check if this is a local book
+    if (isLocalBook(bookId)) {
+      removeLocalBook(bookId);
+      router.push("/dashboard/books");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/books/${encodeURIComponent(bookId)}`, {
         method: "DELETE",
@@ -272,7 +291,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         return;
       }
 
-      router.push("/");
+      router.push("/dashboard/books");
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Delete request failed");
     }
@@ -287,6 +306,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       title: form.book.title.trim(),
       description: form.book.description.trim(),
       cover: form.book.cover.trim(),
+      author: user?.name || "Anonymous",
       chapters: form.chapters.map((c, i) => ({
         ...(c.id && { id: c.id }), // CRITICAL: Send chapter.id for existing chapters only
         title: c.title.trim(),
@@ -303,6 +323,51 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       })),
     };
 
+    // Handle local book creation/update
+    if (createLocally) {
+      try {
+        if (mode === "create") {
+          const { book, chapters } = mapFormToLocalBook(
+            {
+              title: bookPayload.title,
+              description: bookPayload.description,
+              cover: bookPayload.cover,
+              author: bookPayload.author,
+            },
+            bookPayload.chapters
+          );
+          createLocalBook(book, chapters);
+          setForm(createInitialState());
+          router.push(`/book/${book.id}`);
+        } else if (mode === "edit" && initialData?.book) {
+          const existingBook = isLocalBook(initialData.book.id) 
+            ? initialData.book as any
+            : null;
+          
+          if (existingBook) {
+            const { book, chapters } = updateLocalBookFromForm(
+              existingBook,
+              {
+                title: bookPayload.title,
+                description: bookPayload.description,
+                cover: bookPayload.cover,
+                author: bookPayload.author,
+              },
+              bookPayload.chapters
+            );
+            updateLocalBookState(book, chapters);
+            router.push(`/book/${book.id}`);
+          }
+        }
+        onSubmit?.();
+        return;
+      } catch (err) {
+        setApiError(err instanceof Error ? err.message : "Failed to save local book");
+        return;
+      }
+    }
+
+    // Handle backend API call
     const formData = new FormData();
     formData.append("book", JSON.stringify(bookPayload));
 
@@ -362,6 +427,20 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         <h3 className="text-lg font-bold text-text-primary">
           {mode === "edit" ? "Edit Book Details" : "Book Details"}
         </h3>
+
+        {mode === "create" && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={createLocally}
+              onChange={(e) => setCreateLocally(e.target.checked)}
+              className="w-4 h-4 accent-accent-primary"
+            />
+            <span className="text-sm text-text-secondary">
+              Create locally (save to browser only)
+            </span>
+          </label>
+        )}
 
         <Input
           label="Title"

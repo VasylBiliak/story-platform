@@ -31,7 +31,7 @@ export function BookCard({ book }: BookCardProps) {
         {book.isLocal && (
           <div className="absolute top-2 right-2">
             <span className="inline-block text-xs font-semibold px-2 py-1 rounded-md border border-accent-primary text-accent-primary bg-bg-primary/80 backdrop-blur-sm">
-              Not Public
+              Local
             </span>
           </div>
         )}

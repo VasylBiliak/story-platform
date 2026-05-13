@@ -9,18 +9,32 @@ import { getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
 import { getChaptersByBookSorted as getStaticChaptersByBook } from "@/lib/api/chapters";
 import { ChapterListItem } from "@/components/chapter/ChapterListItem";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getLocalBookById, getLocalChaptersByBookId } from "@/lib/local-books/localBookStorage";
+import { LocalBook, LocalChapter } from "@/lib/local-books/localBook.types";
 
 export default function BookPageClient() {
   const params = useParams();
   const bookSlug = params.bookSlug as string;
   const { user, isLoading } = useAuth();
 
-  const [book, setBook] = useState<Book | null>(null);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [book, setBook] = useState<Book | LocalBook | null>(null);
+  const [chapters, setChapters] = useState<Chapter[] | LocalChapter[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
+      // First check if it's a local book
+      const localBook = getLocalBookById(bookSlug);
+      
+      if (localBook) {
+        const localChapters = getLocalChaptersByBookId(bookSlug);
+        setBook(localBook);
+        setChapters(localChapters);
+        setLoading(false);
+        return;
+      }
+
+      // Fall back to API
       const foundBook = await getStaticBookBySlug(bookSlug);
       const foundChapters = foundBook ? await getStaticChaptersByBook(foundBook.id) : [];
 
