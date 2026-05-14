@@ -45,7 +45,6 @@ export function BooksDashboard() {
     await refresh();
   };
 
-  // Merge remote and local books
   const allBooks = [...remoteBooks, ...localBooks] as (Book | LocalBook)[];
   const allChapters = [...remoteChapters, ...localChapters] as (Chapter | LocalChapter)[];
 
@@ -68,13 +67,7 @@ export function BooksDashboard() {
 
       <div>
         <h2 className="text-2xl font-bold text-text-primary mb-6">Your Books</h2>
-        
-        {/* Local Books */}
-        <h3 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
-          Local Books
-        </h3>
         <LocalBooksGrid />
-
         {/* Remote Books with Pagination */}
         <h3 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
           Published Books
