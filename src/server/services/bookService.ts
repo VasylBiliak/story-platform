@@ -1,6 +1,7 @@
 import { prisma } from "@/server/prisma";
 import { applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 import { replaceChapterImages } from "@/server/repositories/book/book.images";
+import { PaginationParams, PaginatedResponse } from "@/types";
 
 export async function getBooks() {
   const books = await prisma.book.findMany({
@@ -17,6 +18,39 @@ export async function getBooks() {
     ...book,
     chapters: applyComputedPricingToChapters(book.chapters),
   }));
+}
+
+export async function getBooksWithPagination(params: PaginationParams = {}): Promise<PaginatedResponse<any>> {
+  const { findBooksWithPagination } = await import("@/server/repositories/bookRepository");
+  const { books, pagination } = await findBooksWithPagination(params);
+
+  // Fetch chapters for each book
+  const booksWithChapters = await Promise.all(
+    books.map(async (book) => {
+      const bookWithChapters = await prisma.book.findUnique({
+        where: { id: book.id },
+        include: {
+          chapters: {
+            include: {
+              images: true,
+            },
+          },
+        },
+      });
+
+      if (!bookWithChapters) return book;
+
+      return {
+        ...bookWithChapters,
+        chapters: applyComputedPricingToChapters(bookWithChapters.chapters),
+      };
+    })
+  );
+
+  return {
+    data: booksWithChapters,
+    pagination,
+  };
 }
 
 export async function getBookById(bookId: string) {

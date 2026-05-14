@@ -1,4 +1,5 @@
 import { Book } from '@/lib/types';
+import { PaginatedResponse, PaginationParams } from '@/types';
 
 async function fetchApi<T>(path: string): Promise<T> {
   const response = await fetch(path, {
@@ -17,6 +18,14 @@ async function fetchApi<T>(path: string): Promise<T> {
 
 export async function getBooks(): Promise<Book[]> {
   return fetchApi<Book[]>('/api/books');
+}
+
+export async function getBooksWithPagination(params: PaginationParams = {}): Promise<PaginatedResponse<Book>> {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+  
+  return fetchApi<PaginatedResponse<Book>>(`/api/books?${searchParams.toString()}`);
 }
 
 export async function getBookById(id: string): Promise<Book | null> {

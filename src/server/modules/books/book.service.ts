@@ -8,8 +8,9 @@ import { parseBookRequest } from "./book.parser";
 import { validateBookPayload } from "./book.validator";
 import { ensureBookOwner } from "./book.permissions";
 import { mapToCreatePayload, mapToUpdatePayload } from "./book.mapper";
-import { createBook, updateBook, deleteBook, getBooks, getBookById } from "@/server/services/bookService";
+import { createBook, updateBook, deleteBook, getBooks, getBookById, getBooksWithPagination } from "@/server/services/bookService";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { PaginationParams } from "@/types";
 
 /**
  * Create a new book
@@ -67,10 +68,17 @@ export async function deleteBookService(req: NextRequest, bookId: string) {
 }
 
 /**
- * Get all books
+ * Get all books (non-paginated, for backward compatibility)
  */
 export async function listBooksService() {
   return getBooks();
+}
+
+/**
+ * Get paginated books
+ */
+export async function listBooksPaginatedService(params: PaginationParams = {}) {
+  return getBooksWithPagination(params);
 }
 
 /**

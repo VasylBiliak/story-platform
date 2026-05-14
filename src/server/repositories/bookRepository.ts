@@ -1,10 +1,37 @@
 import { prisma } from "@/server/prisma";
 import { Book, Chapter } from "@/lib/types";
+import { PaginationParams, PaginationMeta } from "@/types";
 
 export async function findAllBooks() {
   return prisma.book.findMany({
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function findBooksWithPagination(params: PaginationParams = {}) {
+  const page = params.page || 1;
+  const limit = params.limit || 8;
+  const skip = (page - 1) * limit;
+
+  const [books, total] = await Promise.all([
+    prisma.book.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.book.count(),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+  const pagination: PaginationMeta = {
+    page,
+    limit,
+    total,
+    totalPages,
+    hasMore: page < totalPages,
+  };
+
+  return { books, pagination };
 }
 
 export async function findBookById(id: string) {

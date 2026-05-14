@@ -12,8 +12,8 @@ import {
 } from "@/lib/api-response";
 import { listBooksHandler } from "@/server/modules/books/book.controller";
 
-export async function GET() {
-  return listBooksHandler();
+export async function GET(req: NextRequest) {
+  return listBooksHandler(req);
 }
 
 export async function POST(req: NextRequest) {

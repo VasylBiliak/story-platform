@@ -7,17 +7,32 @@ import { successResponse, errorResponse } from "@/server/utils/api";
 import { AppError } from "@/server/core/errors/AppError";
 import {
   listBooksService,
+  listBooksPaginatedService,
   getBookByIdService,
   createBookService,
   updateBookService,
   deleteBookService,
 } from "./book.service";
 import { getChapters } from "@/server/services/chapterService";
+import { PaginationParams } from "@/types";
 
-export async function listBooksHandler() {
+export async function listBooksHandler(req: NextRequest) {
   try {
-    const books = await listBooksService();
-    return successResponse(books);
+    const searchParams = req.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "8", 10);
+
+    // Validate params
+    if (isNaN(page) || page < 1) {
+      return errorResponse("Invalid page parameter", 400);
+    }
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      return errorResponse("Invalid limit parameter (must be between 1 and 100)", 400);
+    }
+
+    const params: PaginationParams = { page, limit };
+    const result = await listBooksPaginatedService(params);
+    return successResponse(result);
   } catch (error) {
     console.error("[BookController] listBooks error:", error);
     return handleControllerError(error);
