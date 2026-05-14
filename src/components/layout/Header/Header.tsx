@@ -11,10 +11,6 @@ const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
-    
-  const scrollToBooks = () => {
-      scrollToWithOffset('books');
-    };
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
@@ -34,10 +30,13 @@ const Header = () => {
   ];
 
   const handleNavigate = (href: string) => {
-    // Handle hash navigation for same-page scrolling
     if (href.startsWith('/#')) {
       const id = href.replace('/#', '');
-      scrollToWithOffset(id);
+      if (pathname === '/') {
+        scrollToWithOffset(id);
+      } else {
+        router.push(href);
+      }
     } else {
       router.push(href);
     }
@@ -51,7 +50,7 @@ const Header = () => {
     'relative font-[Oswald] text-[28px] font-semibold uppercase tracking-[2px] bg-transparent py-2 cursor-pointer transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary';
 
   const NavLink = ({ href, children, isMobile = false }: { href: string; children: React.ReactNode; isMobile?: boolean }) => {
-    const isActive = pathname === href || pathname.startsWith(href);
+    const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
     const baseClasses = isMobile ? baseMobileBtn : baseDesktopBtn;
     
     return (
@@ -80,14 +79,14 @@ const Header = () => {
   return (
     <>
       <motion.header
-        className="sticky top-0 z-900 border-b border-border"
+        className="sticky top-0 z-900 border-b border-border bg-bg-primary"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         <div className="flex items-center justify-between px-4 sm:px-8 md:px-14 h-16">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => handleNavigate('/')}
             className="font-[Oswald] text-xl font-bold tracking-[3px] uppercase bg-transparent transition-all duration-300 hover:scale-105 hover:text-accent-primary"
           >
             Story<span className="text-accent-primary hover:text-2xl">Platform</span>
@@ -102,48 +101,45 @@ const Header = () => {
               ))}
             </nav>
 
-            {/* Auth Section */}
-{!isLoading && (
-  <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-    {user ? (
-      <>
-        {/* Desktop / Tablet */}
-        <button
-          onClick={() => router.push("/profile")}
-          className="hidden sm:flex items-center gap-2 text-text-secondary hover:text-accent-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded px-2 py-1 max-w-[140px]"
-        >
-          <span className="text-sm font-medium truncate">
-            {user.name}
-          </span>
-        </button>
+            {!isLoading && (
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                {user ? (
+                  <>
+                    <button
+                      onClick={() => router.push("/profile")}
+                      className="hidden sm:flex items-center gap-2 text-text-secondary hover:text-accent-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded px-2 py-1 max-w-[140px]"
+                    >
+                      <span className="text-sm font-medium truncate">
+                        {user.name}
+                      </span>
+                    </button>
 
-        {/* Mobile Avatar */}
-        <button
-          onClick={() => router.push("/profile")}
-          className="flex sm:hidden w-8 h-8 rounded-full bg-accent-primary items-center justify-center text-bg-primary font-bold text-sm hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-        >
-          {user.name.charAt(0).toUpperCase()}
-        </button>
-      </>
-    ) : (
-      <button
-        onClick={() => router.push("/auth/login")}
-        className="
-          text-[10px] sm:text-xs font-semibold uppercase tracking-[2px]
-          text-accent-primary border border-accent-primary
-          px-2 sm:px-3 md:px-4 py-1.5 sm:py-2
-          rounded
-          hover:bg-accent-primary hover:text-bg-primary
-          transition-all duration-200
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary
-        "
-      >
-        <span className="hidden sm:inline">Login / Register</span>
-        <span className="sm:hidden">Login</span>
-      </button>
-    )}
-  </div>
-)}
+                    <button
+                      onClick={() => router.push("/profile")}
+                      className="flex sm:hidden w-8 h-8 rounded-full bg-accent-primary items-center justify-center text-bg-primary font-bold text-sm hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                    >
+                      {user.name.charAt(0).toUpperCase()}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => router.push("/auth/login")}
+                    className="
+                      text-[10px] sm:text-xs font-semibold uppercase tracking-[2px]
+                      text-accent-primary border border-accent-primary
+                      px-2 sm:px-3 md:px-4 py-1.5 sm:py-2
+                      rounded
+                      hover:bg-accent-primary hover:text-bg-primary
+                      transition-all duration-200
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary
+                    "
+                  >
+                    <span className="hidden sm:inline">Login / Register</span>
+                    <span className="sm:hidden">Login</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             <button
               onClick={toggleMobileMenu}

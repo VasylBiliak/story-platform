@@ -25,7 +25,7 @@ export function LoadMoreButton({
   }
 
   return (
-    <div className="flex justify-center mt-8">
+    <div className="flex justify-center">
       <Button
         onClick={onClick}
         disabled={disabled || isLoading}

@@ -24,7 +24,7 @@ export default function Library() {
   }));
 
   return (
-    <section className="px-2 sm:px-4 md:px-8 py-8">
+    <section className="flex flex-col gap-8 px-2 sm:px-4 md:px-8 py-8" id="books">
       <h1 className="font-[Oswald] text-3xl font-bold uppercase tracking-[3px] mb-8 text-text-primary flex justify-center align-center">
         Library
       </h1>
