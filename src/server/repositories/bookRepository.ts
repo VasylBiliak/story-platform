@@ -13,13 +13,16 @@ export async function findBooksWithPagination(params: PaginationParams = {}) {
   const limit = params.limit || 8;
   const skip = (page - 1) * limit;
 
+  const where = params.ownerId ? { ownerId: params.ownerId } : {};
+
   const [books, total] = await Promise.all([
     prisma.book.findMany({
+      where,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
     }),
-    prisma.book.count(),
+    prisma.book.count({ where }),
   ]);
 
   const totalPages = Math.ceil(total / limit);

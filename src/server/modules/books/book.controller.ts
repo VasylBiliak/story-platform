@@ -21,6 +21,7 @@ export async function listBooksHandler(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "8", 10);
+    const ownerId = searchParams.get("ownerId") || undefined;
 
     // Validate params
     if (isNaN(page) || page < 1) {
@@ -30,7 +31,7 @@ export async function listBooksHandler(req: NextRequest) {
       return errorResponse("Invalid limit parameter (must be between 1 and 100)", 400);
     }
 
-    const params: PaginationParams = { page, limit };
+    const params: PaginationParams = { page, limit, ownerId };
     const result = await listBooksPaginatedService(params);
     return successResponse(result);
   } catch (error) {
