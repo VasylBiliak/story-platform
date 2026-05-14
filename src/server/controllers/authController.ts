@@ -51,6 +51,8 @@ export async function registerHandler(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("[AUTH_ERROR] REGISTER:", error);
+    console.error("[AUTH_ERROR] REGISTER_RAW:", error);
+    console.error("[AUTH_ERROR] REGISTER_STRINGIFIED:", JSON.stringify(error, null, 2));
 
     if (error instanceof Error && error.message === "User already exists") {
       return NextResponse.json(
@@ -65,7 +67,7 @@ export async function registerHandler(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error",
+        message: error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );
@@ -124,7 +126,7 @@ export async function loginHandler(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error",
+        message: error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );
@@ -162,7 +164,7 @@ export async function meHandler(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error",
+        message: error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );
