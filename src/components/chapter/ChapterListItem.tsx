@@ -6,7 +6,6 @@ import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
 interface ChapterListItemProps {
   chapter: Chapter;
   bookSlug: string;
-  author: string;
 }
 
 export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {

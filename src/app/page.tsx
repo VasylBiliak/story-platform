@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import HomeContent from './HomeContent';
 import Hero from '@/components/sections/Hero/Hero';
-import BooksGrid from '@/components/sections/BooksGrid/BooksGrid';
+import Library from '@/components/sections/Library/Library';
 
 export const metadata: Metadata = {
   title: 'Story Platform - Discover Amazing Stories',
@@ -12,7 +12,7 @@ export default function Page() {
   return (
     <main>
       <Hero />
-      <BooksGrid />
+      <Library />
     </main>
   );
 }

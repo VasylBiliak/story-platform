@@ -8,6 +8,7 @@ import { getChaptersByBookSorted } from "@/lib/api/chapters";
 import { BookForm } from "@/components/books/BookForm";
 import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
 import { LocalBook, LocalChapter } from "@/lib/local-books/localBook.types";
+import { LocalBooksGrid } from "@/components/books/LocalBooksGrid";
 
 export function BooksDashboard() {
   const [remoteBooks, setRemoteBooks] = useState<Book[]>([]);
@@ -58,11 +59,19 @@ export function BooksDashboard() {
 
       <div>
         <h2 className="text-2xl font-bold text-text-primary mb-6">Your Books</h2>
+        <h2 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
+          Local Books
+        </h2>
+        <LocalBooksGrid />
         {allBooks.length === 0 ? (
           <p className="text-text-secondary">No books yet. Create one above!</p>
         ) : (
+          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AnimatePresence mode="popLayout">
+
+            {/*<RemotwBooksGrid books={book} />  */}
+{/*             <AnimatePresence mode="popLayout">
               {allBooks.map((book: Book | LocalBook) => (
                 <motion.div
                   key={book.id}
@@ -157,7 +166,7 @@ export function BooksDashboard() {
                   </div>
                 </motion.div>
               ))}
-            </AnimatePresence>
+            </AnimatePresence> */}
           </div>
         )}
       </div>

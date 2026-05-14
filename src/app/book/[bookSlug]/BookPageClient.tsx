@@ -25,7 +25,7 @@ export default function BookPageClient() {
     async function loadData() {
       // First check if it's a local book
       const localBook = getLocalBookById(bookSlug);
-      
+
       if (localBook) {
         const localChapters = getLocalChaptersByBookId(bookSlug);
         setBook(localBook);
@@ -172,9 +172,10 @@ export default function BookPageClient() {
         {chapters.length > 0 ? (
           <div className="space-y-3">
             {chapters.map((chapter) => (
-              <ChapterListItem key={chapter.id} 
-              chapter={chapter} 
-              bookSlug={book.id} 
+              <ChapterListItem
+                key={chapter.id}
+                chapter={chapter}
+                bookSlug={book.id}
               />
             ))}
           </div>
