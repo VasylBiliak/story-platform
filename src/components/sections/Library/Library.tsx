@@ -47,18 +47,12 @@ export default function Library() {
   }
 
   return (
-    <section className="px-4 sm:px-6 md:px-10 py-10">
-      <h1 className="font-[Oswald] text-3xl font-bold uppercase tracking-[3px] mb-8 text-text-primary di justify-center align-center">
+    <section className="px-2 sm:px-4 md:px-8 py-8">
+      <h1 className="font-[Oswald] text-3xl font-bold uppercase tracking-[3px] mb-8 text-text-primary flex justify-center align-center">
         Library
       </h1>
-      <h2 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
-        Local Books
-      </h2>
       <LocalBooksGrid />
 
-      <h2 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
-        Books
-      </h2>
 
       <RemotwBooksGrid books={books} />
     </section>
