@@ -22,6 +22,8 @@ export async function listBooksHandler(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "8", 10);
     const ownerId = searchParams.get("ownerId") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const sort = searchParams.get("sort") as "newest" | "oldest" || undefined;
 
     // Validate params
     if (isNaN(page) || page < 1) {
@@ -30,8 +32,11 @@ export async function listBooksHandler(req: NextRequest) {
     if (isNaN(limit) || limit < 1 || limit > 100) {
       return errorResponse("Invalid limit parameter (must be between 1 and 100)", 400);
     }
+    if (sort && sort !== "newest" && sort !== "oldest") {
+      return errorResponse("Invalid sort parameter (must be 'newest' or 'oldest')", 400);
+    }
 
-    const params: PaginationParams = { page, limit, ownerId };
+    const params: PaginationParams = { page, limit, ownerId, search, sort };
     const result = await listBooksPaginatedService(params);
     return successResponse(result);
   } catch (error) {

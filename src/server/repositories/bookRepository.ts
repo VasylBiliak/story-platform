@@ -13,14 +13,46 @@ export async function findBooksWithPagination(params: PaginationParams = {}) {
   const limit = params.limit || 8;
   const skip = (page - 1) * limit;
 
-  const where = params.ownerId ? { ownerId: params.ownerId } : {};
+  // Build where clause
+  const where: any = {};
+  
+  if (params.ownerId) {
+    where.ownerId = params.ownerId;
+  }
+
+  // Add search filter (case-insensitive search on title and author)
+  if (params.search) {
+    where.OR = [
+      {
+        title: {
+          contains: params.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        author: {
+          contains: params.search,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  // Build orderBy clause
+  const orderBy: any = {};
+  if (params.sort === "oldest") {
+    orderBy.createdAt = "asc";
+  } else {
+    // Default to newest
+    orderBy.createdAt = "desc";
+  }
 
   const [books, total] = await Promise.all([
     prisma.book.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      orderBy,
     }),
     prisma.book.count({ where }),
   ]);

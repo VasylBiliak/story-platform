@@ -12,6 +12,8 @@ interface UseBooksPaginationOptions {
   initialLimit?: number;
   mergeWithLocal?: boolean;
   ownerId?: string;
+  search?: string;
+  sort?: 'newest' | 'oldest';
 }
 
 interface UseBooksPaginationReturn {
@@ -28,7 +30,7 @@ interface UseBooksPaginationReturn {
 }
 
 export function useBooksPagination(options: UseBooksPaginationOptions = {}): UseBooksPaginationReturn {
-  const { initialLimit = 8, mergeWithLocal = true, ownerId } = options;
+  const { initialLimit = 8, mergeWithLocal = true, ownerId, search, sort } = options;
   const { localBooks, isLoaded: localLoaded } = useLocalBooks();
   
   const [remoteBooks, setRemoteBooks] = useState<Book[]>([]);
@@ -54,6 +56,14 @@ export function useBooksPagination(options: UseBooksPaginationOptions = {}): Use
 
       if (ownerId) {
         params.append("ownerId", ownerId);
+      }
+
+      if (search) {
+        params.append("search", search);
+      }
+
+      if (sort) {
+        params.append("sort", sort);
       }
 
       const response = await fetch(`/api/books?${params.toString()}`, {
@@ -83,7 +93,7 @@ export function useBooksPagination(options: UseBooksPaginationOptions = {}): Use
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [initialLimit, ownerId]);
+  }, [initialLimit, ownerId, search, sort]);
 
   const loadMore = useCallback(async () => {
     if (!pagination || !pagination.hasMore || isLoadingMore) return;

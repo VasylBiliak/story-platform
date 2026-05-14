@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button/Button";
 type ExtendedBook = Book & { isLocal?: boolean };
 
 interface BooksSectionProps {
-  title: string;
   books: ExtendedBook[];
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -22,7 +21,6 @@ interface BooksSectionProps {
 }
 
 export function BooksSection({
-  title,
   books,
   isLoading,
   isLoadingMore,
@@ -32,10 +30,7 @@ export function BooksSection({
   emptyAction,
 }: BooksSectionProps) {
   return (
-    <section>
-      <h2 className="font-[Oswald] text-2xl font-bold uppercase tracking-[3px] mb-8 text-text-primary">
-        {title}
-      </h2>
+    <div>
       {isLoading && books.length === 0 ? (
         <p className="text-text-secondary text-center py-12">
           Loading books...
@@ -59,6 +54,6 @@ export function BooksSection({
           />
         </>
       )}
-    </section>
+    </div>
   );
 }

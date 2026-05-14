@@ -19,4 +19,6 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   ownerId?: string;
+  search?: string;
+  sort?: 'newest' | 'oldest';
 }

@@ -104,7 +104,9 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-12">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-text-primary mb-8">Profile</h1>
+        <h1 className="flex items-center justify-center text-3xl font-bold text-text-primary mb-8">
+          Profile
+        </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Account Info */}
@@ -195,7 +197,6 @@ export default function ProfilePage() {
           <div className="lg:col-span-2 space-y-12">
             {/* My Books Section */}
             <BooksSection
-              title="My Books"
               books={mappedMyBooks}
               isLoading={isMyBooksLoading}
               isLoadingMore={isMyBooksLoadingMore}
@@ -206,16 +207,6 @@ export default function ProfilePage() {
                 label: "Browse Library",
                 onClick: () => router.push("/library"),
               }}
-            />
-
-            {/* All Books Section */}
-            <BooksSection
-              title="All Books"
-              books={mappedAllBooks}
-              isLoading={isAllBooksLoading}
-              isLoadingMore={isAllBooksLoadingMore}
-              hasMore={hasMoreAllBooks}
-              loadMore={loadMoreAllBooks}
             />
           </div>
         </div>
