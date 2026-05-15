@@ -1,23 +1,14 @@
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { randomUUID } from "crypto";
+import { supabase } from "@/lib/supabase";
 import type { UploadedFile } from "@/types";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
-
-export async function ensureUploadDir(): Promise<void> {
-  if (!existsSync(UPLOAD_DIR)) {
-    await mkdir(UPLOAD_DIR, { recursive: true });
-  }
-}
+const BUCKET_NAME = "book-images";
 
 export function generateUniqueFilename(originalName: string): string {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 15);
   const ext = originalName.split(".").pop();
-  return `${timestamp}-${random}.${ext}`;
+  return `${randomUUID()}.${ext}`;
 }
 
 export function validateFile(file: File): { valid: boolean; error?: string } {
@@ -44,27 +35,44 @@ export const UPLOAD_CONSTANTS = {
   MAX_FILE_SIZE_MB: MAX_FILE_SIZE / 1024 / 1024,
 } as const;
 
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  return `data:${file.type};base64,${buffer.toString('base64')}`;
+}
+
 export async function uploadFile(file: File): Promise<UploadedFile> {
   const validation = validateFile(file);
   if (!validation.valid) {
     throw new Error(validation.error);
   }
 
-  await ensureUploadDir();
-
   const filename = generateUniqueFilename(file.name);
-  const filepath = join(UPLOAD_DIR, filename);
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  const base64 = await fileToBase64(file);
+  
+  const base64Data = base64.split(',')[1];
+  const buffer = Buffer.from(base64Data, 'base64');
 
-  await writeFile(filepath, buffer);
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(filename, buffer, {
+      contentType: file.type,
+      upsert: false,
+    });
 
-  const url = `/uploads/${filename}`;
+  if (error) {
+    console.error('[Supabase Upload Error]', error);
+    throw new Error(`Failed to upload file to Supabase: ${error.message}`);
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from(BUCKET_NAME)
+    .getPublicUrl(filename);
 
   return {
     filename,
-    url,
-    path: filepath,
+    url: publicUrl,
+    path: filename,
   };
 }
 
