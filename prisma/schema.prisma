@@ -5,7 +5,11 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+<<<<<<< HEAD
   directUrl = env("DATABASE_URL")
+=======
+  directUrl = env("DIRECT_URL")
+>>>>>>> fix/vercel-file-upload
 }
 
 model User {
