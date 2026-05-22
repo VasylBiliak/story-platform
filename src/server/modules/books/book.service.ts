@@ -11,6 +11,7 @@ import { mapToCreatePayload, mapToUpdatePayload } from "./book.mapper";
 import { createBook, updateBook, deleteBook, getBooks, getBookById, getBooksWithPagination } from "@/server/services/bookService";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { PaginationParams } from "@/types";
+import { handleBookLimit } from "@/server/modules/limits/limits.guard";
 
 /**
  * Create a new book
@@ -24,11 +25,46 @@ export async function createBookService(req: NextRequest) {
   const { body } = await parseBookRequest(req);
   const validatedData = validateBookPayload(body);
 
-  const mappedData = mapToCreatePayload(validatedData, user.name || user.email);
+  // Enforce chapter limit (max 5)
+  if (validatedData.chapters && validatedData.chapters.length > 5) {
+    return {
+      error: "Chapter limit reached",
+      message: "Maximum number of chapters per book is 5.",
+      status: 400,
+    };
+  }
 
+  // Enforce image limit (max 3 per chapter)
+  if (validatedData.chapters && validatedData.chapters.some((c: any) => c.images && c.images.length > 3)) {
+    return {
+      error: "Image limit reached",
+      message: "Maximum number of images per chapter is 3.",
+      status: 400,
+    };
+  }
+
+  // Book limit: delete oldest if needed
+  const limitResult = await handleBookLimit(user.id);
+
+  const mappedData = mapToCreatePayload(validatedData, user.name || user.email);
   const book = await createBook(user.id, mappedData);
 
-  return book;
+  if (limitResult) {
+    return {
+      message: "Book limit reached. Your oldest book was replaced because this is a demo environment.",
+      maxBooks: 3,
+      replacedBookId: limitResult.removedBookId,
+      createdBook: book,
+      status: 201,
+    };
+  }
+
+  return {
+    message: "Book created successfully.",
+    maxBooks: 3,
+    createdBook: book,
+    status: 201,
+  };
 }
 
 /**

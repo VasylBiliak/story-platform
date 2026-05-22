@@ -77,8 +77,31 @@ export async function getChaptersHandler(req: NextRequest) {
 
 export async function createBookHandler(req: NextRequest) {
   try {
-    const book = await createBookService(req);
-    return successResponse(book);
+    const result = await createBookService(req);
+    if (result?.error) {
+      return errorResponse(result.message, result.status || 400);
+    }
+    // If book was replaced due to limit, return special response
+    if (result?.replacedBookId) {
+      return new Response(
+        JSON.stringify({
+          message: result.message,
+          maxBooks: result.maxBooks,
+          replacedBookId: result.replacedBookId,
+          createdBook: result.createdBook,
+        }),
+        { status: 201, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    // Normal book creation
+    return new Response(
+      JSON.stringify({
+        message: result.message,
+        maxBooks: result.maxBooks,
+        createdBook: result.createdBook,
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error("[BookController] createBook error:", error);
     return handleControllerError(error);

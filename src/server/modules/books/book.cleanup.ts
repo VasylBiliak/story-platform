@@ -14,34 +14,20 @@
  */
 
 import { prisma } from "@/server/prisma";
+import { deleteChapterImages } from '@/server/modules/chapters/chapter.cleanup';
 
 export async function deleteBookRelations(bookId: string): Promise<void> {
   const chapters = await prisma.chapter.findMany({
-    where: {
-      bookId,
-    },
-    select: {
-      id: true,
-    },
+    where: { bookId },
+    select: { id: true },
   });
-
   const chapterIds = chapters.map(({ id }) => id);
-
+  for (const chapterId of chapterIds) {
+    await deleteChapterImages(chapterId);
+  }
   if (chapterIds.length > 0) {
-    await prisma.chapterImage.deleteMany({
-      where: {
-        chapterId: {
-          in: chapterIds,
-        },
-      },
-    });
-
     await prisma.chapter.deleteMany({
-      where: {
-        id: {
-          in: chapterIds,
-        },
-      },
+      where: { id: { in: chapterIds } },
     });
   }
 }

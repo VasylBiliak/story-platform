@@ -11,6 +11,8 @@ import {
   notFoundResponse,
   serverErrorResponse,
 } from "@/lib/api-response";
+import { handleChapterLimit, handleChapterImageLimit } from "@/server/modules/limits/limits.guard";
+import { LimitsService } from "@/server/modules/limits/limits.service";
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,9 +73,26 @@ export async function POST(req: NextRequest) {
       return errorResponse("Slug must be unique within the book", 400);
     }
 
+    // Enforce chapter limit
+    const chapterCount = await LimitsService.countChaptersByBook(parseResult.data.bookId);
+    if (chapterCount >= 5) {
+      return errorResponse(
+        "Maximum number of chapters per book is 5.",
+        400
+      );
+    }
+
     let uploadedImages: any[] = [];
 
     if (images && images.length > 0) {
+      // Enforce image limit
+      if (images.length > 3) {
+        return errorResponse(
+          "Maximum number of images per chapter is 3.",
+          400
+        );
+      }
+
       const validation = UploadService.validateFiles(images);
       if (!validation.valid) {
         return errorResponse(validation.errors.join(", "), 400);

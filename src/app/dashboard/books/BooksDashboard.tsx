@@ -17,6 +17,9 @@ export function BooksDashboard() {
   const [remoteChapters, setRemoteChapters] = useState<Chapter[]>([]);
   const { localBooks, localChapters, isLoaded: localLoaded } = useLocalBooks();
   const { user } = useAuth();
+  const [bookLimitWarning, setBookLimitWarning] = useState(false);
+  const [totalUserBooks, setTotalUserBooks] = useState(0);
+  const MAX_BOOKS = 3;
   
   const {
     books: remoteBooks,
@@ -41,6 +44,13 @@ export function BooksDashboard() {
     }
   }, [remoteBooks]);
 
+  // Update book limit warning
+  useEffect(() => {
+    const total = remoteBooks.length + localBooks.length;
+    setTotalUserBooks(total);
+    setBookLimitWarning(total >= MAX_BOOKS);
+  }, [remoteBooks, localBooks]);
+
   const handleSubmit = async () => {
     await refresh();
   };
@@ -62,6 +72,16 @@ export function BooksDashboard() {
   return (
     <div className="space-y-10">
       <div className="card card-hover rounded-xl p-6">
+        {bookLimitWarning && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <p className="text-sm text-amber-600 font-medium">
+              ⚠️ <span className="font-semibold">Demo Limit Reached</span>
+            </p>
+            <p className="text-xs text-amber-600/80 mt-2">
+              You already have {totalUserBooks} book{totalUserBooks !== 1 ? 's' : ''} (maximum {MAX_BOOKS} in demo). Creating a new book will replace your oldest book.
+            </p>
+          </div>
+        )}
         <BookForm mode="create" onSubmit={handleSubmit} />
       </div>
 

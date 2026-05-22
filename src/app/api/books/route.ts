@@ -11,6 +11,7 @@ import {
   serverErrorResponse,
 } from "@/lib/api-response";
 import { listBooksHandler } from "@/server/modules/books/book.controller";
+import { handleBookLimit } from "@/server/modules/limits/limits.guard";
 
 export async function GET(req: NextRequest) {
   return listBooksHandler(req);
@@ -58,7 +59,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Enforce chapter limit (max 5)
     const chapters = parseResult.data.chapters || [];
+    if (chapters.length > 5) {
+      return errorResponse("Maximum number of chapters per book is 5.", 400);
+    }
+
+    // Enforce image limit (max 3 per chapter)
+    if (chapters.some((c: any) => c.images && c.images.length > 3)) {
+      return errorResponse("Maximum number of images per chapter is 3.", 400);
+    }
+
     const hasChapters = chapters.length > 0;
 
     let uploadedChapterImages: any[] = [];
@@ -77,6 +88,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Enforce book limit: delete oldest if needed
+    const limitResult = await handleBookLimit(user.id);
+
     const book = await BookService.createBookWithChapters(
       parseResult.data,
       uploadedChapterImages,
@@ -84,7 +98,28 @@ export async function POST(req: NextRequest) {
       user.name || user.email
     );
 
-    return successResponse("Book with chapters created successfully", book, 201);
+    // Return response with limit info if book was replaced
+    if (limitResult?.removedBookId) {
+      return new Response(
+        JSON.stringify({
+          message: "Book limit reached. Your oldest book was replaced because this is a demo environment.",
+          maxBooks: 3,
+          replacedBookId: limitResult.removedBookId,
+          createdBook: book,
+        }),
+        { status: 201, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Standard response for new books created without hitting limit
+    return new Response(
+      JSON.stringify({
+        message: "Book created successfully.",
+        maxBooks: 3,
+        createdBook: book,
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error("[API] POST books error:", error);
     return serverErrorResponse();

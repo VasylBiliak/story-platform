@@ -398,6 +398,26 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       });
 
       const payload = await response.json();
+      
+      // Handle new limit response structure
+      if (payload?.replacedBookId || payload?.createdBook) {
+        if (payload?.replacedBookId) {
+          setApiError(`${payload.message} Book ID: ${payload.replacedBookId.substring(0, 8)}...`);
+        }
+        onSubmit?.();
+        const bookSlug = payload.createdBook?.id;
+        if (mode === "create") {
+          setForm(createInitialState());
+        }
+        if (bookSlug) {
+          router.push(`/book/${bookSlug}`);
+        } else {
+          router.push("/dashboard/books");
+        }
+        return;
+      }
+      
+      // Handle legacy success/error response
       if (!payload?.success) {
         setApiError(payload?.error || `Save failed: HTTP ${response.status}`);
         return;
@@ -709,11 +729,22 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         >
           + Add Chapter
         </Button>
+        {form.chapters.length >= 5 && (
+          <p className="text-xs text-amber-600 text-center">
+            Maximum number of chapters reached (5). You have reached the demo limit.
+          </p>
+        )}
       </div>
 
       {apiError && (
         <div className="p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
           {apiError}
+        </div>
+      )}
+
+      {form.chapters.length >= 5 && (
+        <div className="p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-600 text-xs">
+          Maximum number of chapters reached ({form.chapters.length}).
         </div>
       )}
 

@@ -421,14 +421,21 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
           ))}
         </AnimatePresence>
 
-        <button
-          type="button"
-          onClick={addChapter}
-          disabled={form.chapters.length >= 5}
-          className="w-full px-4 py-2 border border-border rounded-lg text-text-secondary hover:text-text-primary hover:border-accent-primary transition disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          + Add Chapter
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={addChapter}
+            disabled={form.chapters.length >= 5}
+            className="w-full px-4 py-2 border border-border rounded-lg text-text-secondary hover:text-text-primary hover:border-accent-primary transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            + Add Chapter
+          </button>
+          {form.chapters.length >= 5 && (
+            <p className="text-xs text-amber-600 text-center">
+              Maximum number of chapters reached (5).
+            </p>
+          )}
+        </div>
       </div>
 
       <button
