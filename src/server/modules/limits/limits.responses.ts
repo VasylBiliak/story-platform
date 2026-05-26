@@ -1,10 +1,10 @@
 // Frontend-friendly API response builders for limits
 
 export const LIMITS_RESPONSES = {
-  bookLimitReached: (replacedBookId: string, createdBook: any) => ({
+  bookLimitReached: (replacedBook: { id: string; title: string; cover: string }, createdBook: any) => ({
     message: 'Book limit reached. Your oldest book was replaced because this is a demo environment.',
     maxBooks: 3,
-    replacedBookId,
+    replacedBook,
     createdBook,
   }),
 

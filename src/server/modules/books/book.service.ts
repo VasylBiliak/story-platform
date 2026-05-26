@@ -53,7 +53,7 @@ export async function createBookService(req: NextRequest) {
     return {
       message: "Book limit reached. Your oldest book was replaced because this is a demo environment.",
       maxBooks: 3,
-      replacedBookId: limitResult.removedBookId,
+      replacedBook: limitResult.replacedBook,
       createdBook: book,
       status: 201,
     };

@@ -12,6 +12,7 @@ export interface ChapterLimits {
   maxImagesPerChapter: number;
 }
 
+export interface PlanLimits {
   user: UserLimits;
   chapter: ChapterLimits;
 }

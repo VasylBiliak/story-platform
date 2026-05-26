@@ -464,9 +464,9 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       }
 
       // Handle new limit response structure (legacy)
-      if (payload?.replacedBookId || payload?.createdBook) {
-        if (payload?.replacedBookId) {
-          setApiError(`${payload.message} Book ID: ${payload.replacedBookId.substring(0, 8)}...`);
+      if (payload?.replacedBook || payload?.createdBook) {
+        if (payload?.replacedBook) {
+          setApiError(`${payload.message} Book ID: ${payload.replacedBook.id.substring(0, 8)}...`);
         }
         onSubmit?.();
         const bookSlug = payload.createdBook?.id;

@@ -1,5 +1,6 @@
 import { prisma } from '@/server/prisma';
-import { LIMITS, PlanType } from './limits.config';
+import { LIMITS } from './limits.config';
+import { PlanType } from './limits.types';
 
 export class LimitsService {
 	static getPlan(userPlan: PlanType = 'FREE') {

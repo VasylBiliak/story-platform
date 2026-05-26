@@ -82,12 +82,12 @@ export async function createBookHandler(req: NextRequest) {
       return errorResponse(result.message, result.status || 400);
     }
     // If book was replaced due to limit, return special response
-    if (result?.replacedBookId) {
+    if (result?.replacedBook) {
       return new Response(
         JSON.stringify({
           message: result.message,
           maxBooks: result.maxBooks,
-          replacedBookId: result.replacedBookId,
+          replacedBook: result.replacedBook,
           createdBook: result.createdBook,
         }),
         { status: 201, headers: { 'Content-Type': 'application/json' } }
