@@ -9,6 +9,7 @@ import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/u
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
 import { mapFormToLocalBook, updateLocalBookFromForm } from "@/lib/local-books/localBookMapper";
+import { BookReplacementModal } from "@/components/modals/BookReplacementModal";
 
 
 export type BookFormMode = "create" | "edit";
@@ -106,6 +107,10 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [createLocally, setCreateLocally] = useState(false);
+  const [replacementModalOpen, setReplacementModalOpen] = useState(false);
+  const [replacementBooks, setReplacementBooks] = useState<any[]>([]);
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
   // Check if editing a local book
   useEffect(() => {
@@ -297,6 +302,57 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     }
   };
 
+  const handleReplacementConfirm = async () => {
+    if (!selectedBookId || !pendingFormData) return;
+
+    setApiError(null);
+    setReplacementModalOpen(false);
+
+    // Add replaceBookId to the pending form data
+    pendingFormData.append("replaceBookId", selectedBookId);
+
+    try {
+      const endpoint = mode === "create" ? "/api/books" : `/api/books/${encodeURIComponent(initialData?.book.id ?? "")}`;
+      const method = mode === "create" ? "POST" : "PUT";
+      const response = await fetch(endpoint, {
+        method,
+        headers: await getAuthHeaders(),
+        body: pendingFormData,
+      });
+
+      const payload = await response.json();
+
+      if (!payload?.createdBook && !payload?.success) {
+        setApiError(payload?.error || `Save failed: HTTP ${response.status}`);
+        return;
+      }
+
+      onSubmit?.();
+      const bookSlug = payload.createdBook?.id || payload.data?.id;
+      if (mode === "create") {
+        setForm(createInitialState());
+      }
+
+      if (bookSlug) {
+        router.push(`/book/${bookSlug}`);
+      } else {
+        router.push("/dashboard/books");
+      }
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Save request failed");
+    } finally {
+      setPendingFormData(null);
+      setSelectedBookId(null);
+    }
+  };
+
+  const handleReplacementCancel = () => {
+    setReplacementModalOpen(false);
+    setReplacementBooks([]);
+    setSelectedBookId(null);
+    setPendingFormData(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
@@ -398,8 +454,16 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       });
 
       const payload = await response.json();
-      
-      // Handle new limit response structure
+
+      // Handle 409 Conflict - book limit reached, requires replacement
+      if (response.status === 409 && payload?.requiresReplacement) {
+        setReplacementBooks(payload.books || []);
+        setPendingFormData(formData);
+        setReplacementModalOpen(true);
+        return;
+      }
+
+      // Handle new limit response structure (legacy)
       if (payload?.replacedBookId || payload?.createdBook) {
         if (payload?.replacedBookId) {
           setApiError(`${payload.message} Book ID: ${payload.replacedBookId.substring(0, 8)}...`);
@@ -416,7 +480,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         }
         return;
       }
-      
+
       // Handle legacy success/error response
       if (!payload?.success) {
         setApiError(payload?.error || `Save failed: HTTP ${response.status}`);
@@ -778,6 +842,15 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         onConfirm={handleDelete}
         onCancel={() => setIsModalOpen(false)}
         confirmButtonText="Delete"
+      />
+
+      <BookReplacementModal
+        isOpen={replacementModalOpen}
+        books={replacementBooks}
+        selectedBookId={selectedBookId}
+        onSelectBook={setSelectedBookId}
+        onConfirm={handleReplacementConfirm}
+        onCancel={handleReplacementCancel}
       />
     </form>
   );

@@ -18,10 +18,6 @@ export const LIMITS_RESPONSES = {
     message: 'Maximum number of images per chapter is 3.',
   }),
 
-  ipLimitReached: () => ({
-    error: 'IP limit reached',
-    message: 'This demo allows only 3 accounts per IP address.',
-  }),
 
   bookCreatedSuccessfully: (createdBook: any) => ({
     message: 'Book created successfully.',

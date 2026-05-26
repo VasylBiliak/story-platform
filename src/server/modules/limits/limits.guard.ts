@@ -1,18 +1,32 @@
-import { AppError } from '@/server/core/errors/AppError';
-import { LimitsService } from './limits.service';
-import { LIMITS, PlanType } from './limits.config';
+import { LIMITS } from "./limits.config";
+import { LimitsService } from "./limits.service";
+import type { PlanType } from "./limits.types";
+import { prisma } from "@/server/prisma";
 
-// Throws if IP limit exceeded
-export async function ensureIpLimit(ip: string, plan: PlanType = 'FREE') {
-	const maxUsers = LIMITS[plan].ip.maxUsersPerIp;
-	const count = await LimitsService.countUsersByIp(ip);
-	if (count >= maxUsers) {
-		throw new AppError(
-			'This demo allows only 3 accounts per IP address.',
-			403,
-			'IP_LIMIT_REACHED'
-		);
+// Checks book limit without deleting, returns user books if limit reached
+export async function checkBookLimit(userId: string, plan: PlanType = 'FREE') {
+	const maxBooks = LIMITS[plan].user.maxBooks;
+	const count = await LimitsService.countBooksByUser(userId);
+	if (count >= maxBooks) {
+		// Get all user books for replacement selection
+		const books = await prisma.book.findMany({
+			where: { ownerId: userId },
+			select: {
+				id: true,
+				title: true,
+				cover: true,
+				author: true,
+				createdAt: true,
+			},
+			orderBy: { createdAt: 'desc' },
+		});
+		return {
+			limitReached: true,
+			maxBooks,
+			books,
+		};
 	}
+	return { limitReached: false, maxBooks };
 }
 
 // Handles book limit: deletes oldest if needed, returns info
@@ -22,10 +36,16 @@ export async function handleBookLimit(userId: string, plan: PlanType = 'FREE') {
 	if (count >= maxBooks) {
 		const oldest = await LimitsService.getOldestBookByUser(userId);
 		if (oldest) {
+			// Save metadata before deletion
+			const replacedBook = {
+				id: oldest.id,
+				title: oldest.title,
+				cover: oldest.cover,
+			};
 			await LimitsService.deleteBookById(oldest.id);
 			return {
 				message: 'Book limit reached. Oldest book was removed because this is a demo environment.',
-				removedBookId: oldest.id,
+				replacedBook,
 			};
 		}
 	}

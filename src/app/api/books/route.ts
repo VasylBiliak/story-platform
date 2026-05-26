@@ -11,7 +11,9 @@ import {
   serverErrorResponse,
 } from "@/lib/api-response";
 import { listBooksHandler } from "@/server/modules/books/book.controller";
-import { handleBookLimit } from "@/server/modules/limits/limits.guard";
+import { checkBookLimit } from "@/server/modules/limits/limits.guard";
+import { deleteBookRelations } from "@/server/modules/books/book.cleanup";
+import { prisma } from "@/server/prisma";
 
 export async function GET(req: NextRequest) {
   return listBooksHandler(req);
@@ -88,8 +90,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Enforce book limit: delete oldest if needed
-    const limitResult = await handleBookLimit(user.id);
+    // Check if replaceBookId is provided (user selected a book to replace)
+    const replaceBookId = formData.get("replaceBookId") as string | null;
+
+    if (replaceBookId) {
+      // Verify the book belongs to the current user
+      const bookToDelete = await prisma.book.findUnique({
+        where: { id: replaceBookId },
+        select: { ownerId: true },
+      });
+
+      if (!bookToDelete) {
+        return errorResponse("Book to replace not found", 404);
+      }
+
+      if (bookToDelete.ownerId !== user.id) {
+        return errorResponse("You can only replace your own books", 403);
+      }
+
+      // Delete the selected book with cleanup
+      await deleteBookRelations(replaceBookId);
+      await prisma.book.delete({ where: { id: replaceBookId } });
+    } else {
+      // Check book limit without automatic deletion
+      const limitCheck = await checkBookLimit(user.id);
+      if (limitCheck.limitReached) {
+        return new Response(
+          JSON.stringify({
+            error: "Book limit reached",
+            message: "You already reached the maximum of 3 books available in the demo version.",
+            requiresReplacement: true,
+            maxBooks: limitCheck.maxBooks,
+            books: limitCheck.books,
+          }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     const book = await BookService.createBookWithChapters(
       parseResult.data,
@@ -98,20 +135,7 @@ export async function POST(req: NextRequest) {
       user.name || user.email
     );
 
-    // Return response with limit info if book was replaced
-    if (limitResult?.removedBookId) {
-      return new Response(
-        JSON.stringify({
-          message: "Book limit reached. Your oldest book was replaced because this is a demo environment.",
-          maxBooks: 3,
-          replacedBookId: limitResult.removedBookId,
-          createdBook: book,
-        }),
-        { status: 201, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Standard response for new books created without hitting limit
+    // Standard response for new books created
     return new Response(
       JSON.stringify({
         message: "Book created successfully.",

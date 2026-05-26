@@ -6,10 +6,6 @@ export class LimitsService {
 		return LIMITS[userPlan];
 	}
 
-	// Count users by IP
-	static async countUsersByIp(ip: string): Promise<number> {
-		return prisma.user.count({ where: { ip } });
-	}
 
 	// Count books by user
 	static async countBooksByUser(userId: string): Promise<number> {

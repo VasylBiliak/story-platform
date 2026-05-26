@@ -5,9 +5,6 @@ export const LIMITS: LimitsConfig = {
     user: {
       maxBooks: 3,
     },
-    ip: {
-      maxUsersPerIp: 3,
-    },
     chapter: {
       maxChaptersPerBook: 5,
       maxImagesPerChapter: 3,
@@ -16,9 +13,6 @@ export const LIMITS: LimitsConfig = {
   PRO: {
     user: {
       maxBooks: 100,
-    },
-    ip: {
-      maxUsersPerIp: 100,
     },
     chapter: {
       maxChaptersPerBook: 100,

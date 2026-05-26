@@ -62,10 +62,3 @@ export const IMAGE_LIMIT_ERROR = {
   message: 'Maximum number of images per chapter is 3.',
 };
 
-// ============================================
-// REGISTRATION - IP Limit Error
-// ============================================
-export const IP_LIMIT_ERROR = {
-  error: 'IP limit reached',
-  message: 'This demo allows only 3 accounts per IP address.',
-};

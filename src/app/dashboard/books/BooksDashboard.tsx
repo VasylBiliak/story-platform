@@ -72,16 +72,6 @@ export function BooksDashboard() {
   return (
     <div className="space-y-10">
       <div className="card card-hover rounded-xl p-6">
-        {bookLimitWarning && (
-          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-            <p className="text-sm text-amber-600 font-medium">
-              ⚠️ <span className="font-semibold">Demo Limit Reached</span>
-            </p>
-            <p className="text-xs text-amber-600/80 mt-2">
-              You already have {totalUserBooks} book{totalUserBooks !== 1 ? 's' : ''} (maximum {MAX_BOOKS} in demo). Creating a new book will replace your oldest book.
-            </p>
-          </div>
-        )}
         <BookForm mode="create" onSubmit={handleSubmit} />
       </div>
 

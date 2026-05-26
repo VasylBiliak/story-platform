@@ -6,18 +6,13 @@ export interface UserLimits {
   maxBooks: number;
 }
 
-export interface IpLimits {
-  maxUsersPerIp: number;
-}
 
 export interface ChapterLimits {
   maxChaptersPerBook: number;
   maxImagesPerChapter: number;
 }
 
-export interface PlanLimits {
   user: UserLimits;
-  ip: IpLimits;
   chapter: ChapterLimits;
 }
 
