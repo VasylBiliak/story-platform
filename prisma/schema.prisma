@@ -15,8 +15,9 @@ model User {
   password  String     
   createdAt DateTime   @default(now())
 
-  Book      Book[]
-  Purchase  Purchase[]
+  Book              Book[]
+  Purchase          Purchase[]
+  ChapterPurchase   ChapterPurchase[]
 }
 
 model Book {
@@ -46,6 +47,7 @@ model Chapter {
   bookId      String
   book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   images      ChapterImage[]
+  purchases   ChapterPurchase[]
 
   @@index([bookId])
 }
@@ -70,5 +72,19 @@ model Purchase {
 
   @@unique([userId, bookId])
   @@index([bookId])
+  @@index([userId])
+}
+
+model ChapterPurchase {
+  id             String   @id @default(cuid())
+  userId         String
+  chapterId      String
+  createdAt      DateTime @default(now())
+  
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Chapter        Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([chapterId])
   @@index([userId])
 }

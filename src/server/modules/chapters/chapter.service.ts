@@ -14,6 +14,9 @@ import {
   getChapterBySlugRepository,
   getChaptersByBookIdRepository,
   deleteChapterRepository,
+  getChapterByIdWithOwnershipRepository,
+  getChapterBySlugWithOwnershipRepository,
+  getChaptersByBookIdWithOwnershipRepository,
 } from "./chapter.repository";
 import { uploadMultipleFiles } from "@/lib/upload";
 import type { CreateChapterDto, UpdateChapterDto, ChapterWithImages } from "./chapter.types";
@@ -136,4 +139,94 @@ export async function getChaptersByBookIdService(bookId: string): Promise<Chapte
 export async function deleteChapterService(chapterId: string): Promise<void> {
   await ensureChapterExists(chapterId);
   await deleteChapterRepository(chapterId);
+}
+
+/**
+ * Get a chapter by ID with access control
+ * Free chapters always return full content
+ * Paid chapters return content only if user owns them
+ */
+export async function getChapterByIdWithAccessService(
+  chapterId: string,
+  userId?: string
+): Promise<ChapterWithImages & { purchased?: boolean }> {
+  const chapter = await getChapterByIdWithOwnershipRepository(chapterId, userId);
+  if (!chapter) {
+    throw new NotFoundError("Chapter not found");
+  }
+
+  // Apply access control
+  const isFree = chapter.price === 0;
+  const isPurchased = chapter.purchased === true;
+
+  if (isFree || isPurchased) {
+    // Free or purchased: return full content
+    return chapter;
+  } else {
+    // Paid but not purchased: remove content
+    return {
+      ...chapter,
+      content: "",
+    };
+  }
+}
+
+/**
+ * Get a chapter by book ID and slug with access control
+ * Free chapters always return full content
+ * Paid chapters return content only if user owns them
+ */
+export async function getChapterBySlugWithAccessService(
+  bookId: string,
+  slug: string,
+  userId?: string
+): Promise<ChapterWithImages & { purchased?: boolean }> {
+  const chapter = await getChapterBySlugWithOwnershipRepository(bookId, slug, userId);
+  if (!chapter) {
+    throw new NotFoundError("Chapter not found");
+  }
+
+  // Apply access control
+  const isFree = chapter.price === 0;
+  const isPurchased = chapter.purchased === true;
+
+  if (isFree || isPurchased) {
+    // Free or purchased: return full content
+    return chapter;
+  } else {
+    // Paid but not purchased: remove content
+    return {
+      ...chapter,
+      content: "",
+    };
+  }
+}
+
+/**
+ * Get all chapters for a book with access control
+ * Free chapters always return full content
+ * Paid chapters return content only if user owns them
+ */
+export async function getChaptersByBookIdWithAccessService(
+  bookId: string,
+  userId?: string
+): Promise<(ChapterWithImages & { purchased?: boolean })[]> {
+  const chapters = await getChaptersByBookIdWithOwnershipRepository(bookId, userId);
+
+  // Apply access control to each chapter
+  return chapters.map((chapter) => {
+    const isFree = chapter.price === 0;
+    const isPurchased = chapter.purchased === true;
+
+    if (isFree || isPurchased) {
+      // Free or purchased: return full content
+      return chapter;
+    } else {
+      // Paid but not purchased: remove content
+      return {
+        ...chapter,
+        content: "",
+      };
+    }
+  });
 }

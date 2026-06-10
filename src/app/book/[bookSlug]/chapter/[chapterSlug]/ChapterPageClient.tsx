@@ -171,7 +171,7 @@ export default function ChapterPageClient() {
 
       {/* Chapter Content */}
       <article className="bg-bg-secondary rounded-xl border border-border overflow-hidden">
-        {chapter.isFree ? (
+        {chapter.isFree || chapter.purchased ? (
           <div className="p-8 sm:p-12">
             <div className="prose prose-lg max-w-none">
               {chapter.content.split("\n\n").map((paragraph, index) => (
@@ -189,43 +189,25 @@ export default function ChapterPageClient() {
                 <p className="text-text-secondary mb-6">
                   {chapter.isFree
                     ? "This chapter is free to read. Enjoy the content!"
-                    : "Unlock this premium chapter to continue reading."
+                    : "You've purchased this chapter. Thanks for your support!"
                   }
                 </p>
 
                 {<Link
-                  href={chapter.isFree ? `/book/${book.id}` : "#"}
-                  className={`inline-flex items-center justify-center px-8 py-3 font-medium rounded-lg transition-all transform hover:scale-105 ${chapter.isFree
-                    ? "bg-status-success text-white hover:bg-status-success-hover"
-                    : "bg-accent-primary text-white hover:bg-accent-primary-hover shadow-lg"
-                    }`}
+                  href={`/book/${book.id}`}
+                  className={`inline-flex items-center justify-center px-8 py-3 font-medium rounded-lg transition-all transform hover:scale-105 bg-status-success text-white hover:bg-status-success-hover`}
                 >
-                  {chapter.isFree ? (
-                    <button
-                      type="button"
-                      className=" display flex items-center justify-center text-lg 
-                      cursor-pointer overflow-hidden border-2 border-accent-primary 
-                      px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
-                      duration-200 
-                      hover:bg-accent-primary hover:text-bg-primary active:scale-95 
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                    >
-                      <BookOpenIcon className="w-4 h-4 mr-2" />Read for Free
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className=" display flex items-center justify-center text-lg 
-                      cursor-pointer overflow-hidden border-2 border-accent-primary 
-                      px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
-                      duration-200 
-                      hover:bg-accent-primary hover:text-bg-primary active:scale-95 
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                    >
-                      Buy for ${(chapter.finalPrice || 0).toFixed(2)}
-                    </button>
-
-                  )}
+                  <button
+                    type="button"
+                    className=" display flex items-center justify-center text-lg 
+                    cursor-pointer overflow-hidden border-2 border-accent-primary 
+                    px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
+                    duration-200 
+                    hover:bg-accent-primary hover:text-bg-primary active:scale-95 
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                  >
+                    <BookOpenIcon className="w-4 h-4 mr-2" />Continue Reading
+                  </button>
                 </Link>}
               </div>
             </div>

@@ -82,7 +82,7 @@ export class ChapterService {
     }
   }
 
-  static async getChapterById(chapterId: string) {
+  static async getChapterById(chapterId: string, userId?: string) {
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
       include: {
@@ -98,11 +98,40 @@ export class ChapterService {
 
     if (!chapter) return null;
 
+    // Check ownership for paid chapters
+    let purchased = false;
+    if (userId && chapter.price > 0) {
+      try {
+        const purchase = await prisma.chapterPurchase.findUnique({
+          where: {
+            userId_chapterId: {
+              userId,
+              chapterId,
+            },
+          },
+        });
+        purchased = purchase !== null;
+      } catch (error) {
+        // Table doesn't exist yet - treat as not purchased
+        console.warn("[ChapterService] ChapterPurchase table not available, treating as not purchased");
+        purchased = false;
+      }
+    }
+
     // Add computed fields
-    return applyComputedPricing(chapter) as any;
+    const chapterWithPricing = applyComputedPricing(chapter) as any;
+    chapterWithPricing.purchased = purchased;
+
+    // Apply access control: remove content for paid chapters not purchased
+    const isFree = chapter.price === 0;
+    if (!isFree && !purchased) {
+      chapterWithPricing.content = "";
+    }
+
+    return chapterWithPricing;
   }
 
-  static async getChaptersByBookId(bookId: string) {
+  static async getChaptersByBookId(bookId: string, userId?: string) {
     const chapters = await prisma.chapter.findMany({
       where: { bookId },
       include: {
@@ -110,8 +139,43 @@ export class ChapterService {
       },
     });
 
-    // Add computed fields
-    return applyComputedPricingToChapters(chapters) as any;
+    // Check ownership for each paid chapter
+    const chaptersWithOwnership = await Promise.all(
+      chapters.map(async (chapter) => {
+        let purchased = false;
+        if (userId && chapter.price > 0) {
+          try {
+            const purchase = await prisma.chapterPurchase.findUnique({
+              where: {
+                userId_chapterId: {
+                  userId,
+                  chapterId: chapter.id,
+                },
+              },
+            });
+            purchased = purchase !== null;
+          } catch (error) {
+            // Table doesn't exist yet - treat as not purchased
+            console.warn("[ChapterService] ChapterPurchase table not available, treating as not purchased");
+            purchased = false;
+          }
+        }
+
+        // Add computed fields
+        const chapterWithPricing = applyComputedPricing(chapter) as any;
+        chapterWithPricing.purchased = purchased;
+
+        // Apply access control: remove content for paid chapters not purchased
+        const isFree = chapter.price === 0;
+        if (!isFree && !purchased) {
+          chapterWithPricing.content = "";
+        }
+
+        return chapterWithPricing;
+      })
+    );
+
+    return chaptersWithOwnership;
   }
 
   static async verifySlugUnique(bookId: string, slug: string): Promise<boolean> {
@@ -123,5 +187,24 @@ export class ChapterService {
     });
 
     return !existing;
+  }
+
+  static async createChapterPurchase(userId: string, chapterId: string) {
+    try {
+      await prisma.chapterPurchase.create({
+        data: {
+          userId,
+          chapterId,
+        },
+      });
+    } catch (error: any) {
+      console.error("[ChapterService] Create purchase error:", error);
+      // If table doesn't exist, log a warning but don't crash
+      if (error.code === 'P2021' || error.message?.includes('does not exist')) {
+        console.warn("[ChapterService] ChapterPurchase table not available, purchase not created");
+        return;
+      }
+      throw new Error("Failed to create chapter purchase");
+    }
   }
 }

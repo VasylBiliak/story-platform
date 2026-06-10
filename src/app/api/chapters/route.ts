@@ -22,7 +22,10 @@ export async function GET(req: NextRequest) {
       return errorResponse("Book ID is required", 400);
     }
 
-    const chapters = await ChapterService.getChaptersByBookId(bookId);
+    const user = await getCurrentUser(req);
+    const userId = user?.id;
+
+    const chapters = await ChapterService.getChaptersByBookId(bookId, userId);
     return successResponse("Chapters retrieved successfully", chapters);
   } catch (error) {
     console.error("[API] GET chapters error:", error);

@@ -120,8 +120,8 @@ export async function listBooksPaginatedService(params: PaginationParams = {}) {
 /**
  * Get a book by ID
  */
-export async function getBookByIdService(bookId: string) {
-  const book = await getBookById(bookId);
+export async function getBookByIdService(bookId: string, userId?: string) {
+  const book = await getBookById(bookId, userId);
   if (!book) {
     throw new Error("Book not found");
   }

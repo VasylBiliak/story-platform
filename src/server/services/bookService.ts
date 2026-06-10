@@ -1,5 +1,5 @@
 import { prisma } from "@/server/prisma";
-import { applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
+import { applyComputedPricing, applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 import { replaceChapterImages } from "@/server/repositories/book/book.images";
 import { PaginationParams, PaginatedResponse } from "@/types";
 
@@ -53,7 +53,7 @@ export async function getBooksWithPagination(params: PaginationParams = {}): Pro
   };
 }
 
-export async function getBookById(bookId: string) {
+export async function getBookById(bookId: string, userId?: string) {
   const book = await prisma.book.findUnique({
     where: {
       id: bookId,
@@ -69,9 +69,44 @@ export async function getBookById(bookId: string) {
 
   if (!book) return null;
 
+  // Apply access control to chapters
+  const chaptersWithAccess = await Promise.all(
+    book.chapters.map(async (chapter) => {
+      let purchased = false;
+      if (userId && chapter.price > 0) {
+        try {
+          const purchase = await prisma.chapterPurchase.findUnique({
+            where: {
+              userId_chapterId: {
+                userId,
+                chapterId: chapter.id,
+              },
+            },
+          });
+          purchased = purchase !== null;
+        } catch (error) {
+          // Table doesn't exist yet - treat as not purchased
+          console.warn("[BookService] ChapterPurchase table not available, treating as not purchased");
+          purchased = false;
+        }
+      }
+
+      const chapterWithPricing = applyComputedPricing(chapter) as any;
+      chapterWithPricing.purchased = purchased;
+
+      // Apply access control: remove content for paid chapters not purchased
+      const isFree = chapter.price === 0;
+      if (!isFree && !purchased) {
+        chapterWithPricing.content = "";
+      }
+
+      return chapterWithPricing;
+    })
+  );
+
   return {
     ...book,
-    chapters: applyComputedPricingToChapters(book.chapters),
+    chapters: chaptersWithAccess,
   };
 }
 

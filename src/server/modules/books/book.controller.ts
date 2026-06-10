@@ -15,6 +15,7 @@ import {
 } from "./book.service";
 import { getChapters } from "@/server/services/chapterService";
 import { PaginationParams } from "@/types";
+import { getCurrentUser } from "@/lib/getCurrentUser";
 
 export async function listBooksHandler(req: NextRequest) {
   try {
@@ -45,9 +46,11 @@ export async function listBooksHandler(req: NextRequest) {
   }
 }
 
-export async function getBookByIdHandler(bookId: string) {
+export async function getBookByIdHandler(bookId: string, req?: NextRequest) {
   try {
-    const book = await getBookByIdService(bookId);
+    const user = req ? await getCurrentUser(req) : null;
+    const userId = user?.id;
+    const book = await getBookByIdService(bookId, userId);
     return successResponse(book);
   } catch (error) {
     console.error("[BookController] getBookById error:", error);

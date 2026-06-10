@@ -12,14 +12,19 @@ import {
   getChapterBySlugService,
   getChaptersByBookIdService,
   deleteChapterService,
+  getChapterByIdWithAccessService,
+  getChapterBySlugWithAccessService,
+  getChaptersByBookIdWithAccessService,
 } from "./chapter.service";
 import { validateCreateChapterPayload, validateUpdateChapterPayload } from "./chapter.validation";
 import { ensureChapterOwner } from "./chapter.permissions";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 
-export async function getChapterByIdHandler(chapterId: string) {
+export async function getChapterByIdHandler(chapterId: string, req?: NextRequest) {
   try {
-    const chapter = await getChapterByIdService(chapterId);
+    const user = req ? await getCurrentUser(req) : null;
+    const userId = user?.id;
+    const chapter = await getChapterByIdWithAccessService(chapterId, userId);
     return successResponse(chapter);
   } catch (error) {
     console.error("[ChapterController] getChapterById error:", error);
@@ -27,9 +32,11 @@ export async function getChapterByIdHandler(chapterId: string) {
   }
 }
 
-export async function getChapterBySlugHandler(bookId: string, slug: string) {
+export async function getChapterBySlugHandler(bookId: string, slug: string, req?: NextRequest) {
   try {
-    const chapter = await getChapterBySlugService(bookId, slug);
+    const user = req ? await getCurrentUser(req) : null;
+    const userId = user?.id;
+    const chapter = await getChapterBySlugWithAccessService(bookId, slug, userId);
     return successResponse(chapter);
   } catch (error) {
     console.error("[ChapterController] getChapterBySlug error:", error);
@@ -37,9 +44,11 @@ export async function getChapterBySlugHandler(bookId: string, slug: string) {
   }
 }
 
-export async function getChaptersByBookIdHandler(bookId: string) {
+export async function getChaptersByBookIdHandler(bookId: string, req?: NextRequest) {
   try {
-    const chapters = await getChaptersByBookIdService(bookId);
+    const user = req ? await getCurrentUser(req) : null;
+    const userId = user?.id;
+    const chapters = await getChaptersByBookIdWithAccessService(bookId, userId);
     return successResponse(chapters);
   } catch (error) {
     console.error("[ChapterController] getChaptersByBookId error:", error);
