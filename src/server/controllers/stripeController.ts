@@ -111,13 +111,16 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
 }
 
 export async function webhookHandler(req: NextRequest) {
-  console.log("[STRIPE_WEBHOOK] Webhook received");
+  console.log("[STRIPE_WEBHOOK] ===== Webhook received =====");
+  console.log("[STRIPE_WEBHOOK] Timestamp:", new Date().toISOString());
+  console.log("[STRIPE_WEBHOOK] Headers:", Object.fromEntries(req.headers.entries()));
   
   try {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") as string;
 
     console.log("[STRIPE_WEBHOOK] Signature present:", !!signature);
+    console.log("[STRIPE_WEBHOOK] Body length:", body.length);
 
     if (!signature) {
       return NextResponse.json(
@@ -142,6 +145,9 @@ export async function webhookHandler(req: NextRequest) {
       console.log("[STRIPE_WEBHOOK] Signature verified, event type:", event.type);
     } catch (err) {
       console.error("[STRIPE_ERROR] WEBHOOK_SIGNATURE_VERIFICATION:", err);
+      console.error("[STRIPE_ERROR] Error message:", err instanceof Error ? err.message : String(err));
+      console.error("[STRIPE_ERROR] Webhook secret used:", webhookSecret.substring(0, 10) + "...");
+      console.error("[STRIPE_ERROR] Signature:", signature.substring(0, 20) + "...");
       return NextResponse.json(
         { success: false, message: "Invalid signature" },
         { status: 400 }
@@ -150,8 +156,11 @@ export async function webhookHandler(req: NextRequest) {
 
     // Handle checkout.session.completed event
     if (event.type === "checkout.session.completed") {
-      console.log("[STRIPE_WEBHOOK] Processing checkout.session.completed");
+      console.log("[STRIPE_WEBHOOK] ===== Processing checkout.session.completed =====");
       const session = event.data.object as Stripe.Checkout.Session;
+      console.log("[STRIPE_WEBHOOK] Session ID:", session.id);
+      console.log("[STRIPE_WEBHOOK] Session metadata:", JSON.stringify(session.metadata, null, 2));
+      
       const { userId, chapterId } = session.metadata as {
         userId: string;
         chapterId: string;
@@ -184,10 +193,11 @@ export async function webhookHandler(req: NextRequest) {
       console.log("[STRIPE_WEBHOOK] Chapter verified:", chapter.title);
 
       // Check if ownership already exists (idempotency)
-      console.log("[STRIPE_WEBHOOK] Checking existing ownership");
+      console.log("[STRIPE_WEBHOOK] Checking existing ownership for userId:", userId, "chapterId:", chapterId);
       const alreadyOwned = await checkChapterOwnershipRepository(chapterId, userId);
+      console.log("[STRIPE_WEBHOOK] Ownership check result:", alreadyOwned);
       if (alreadyOwned) {
-        console.log("[STRIPE_WEBHOOK] Chapter already owned, skipping");
+        console.log("[STRIPE_WEBHOOK] Chapter already owned, skipping purchase creation");
         return NextResponse.json(
           { success: true, message: "Already owned" },
           { status: 200 }
@@ -195,7 +205,7 @@ export async function webhookHandler(req: NextRequest) {
       }
 
       // Create ChapterPurchase record
-      console.log("[STRIPE_WEBHOOK] Creating chapter purchase record");
+      console.log("[STRIPE_WEBHOOK] Creating chapter purchase record for userId:", userId, "chapterId:", chapterId);
       await createChapterPurchaseRepository(userId, chapterId);
       console.log("[STRIPE_WEBHOOK] Chapter purchase created successfully:", { userId, chapterId });
     }

@@ -154,6 +154,10 @@ export async function checkChapterOwnershipRepository(
   chapterId: string,
   userId: string
 ): Promise<boolean> {
+  console.log("[ChapterRepository] ===== Checking chapter ownership =====");
+  console.log("[ChapterRepository] chapterId:", chapterId);
+  console.log("[ChapterRepository] userId:", userId);
+  
   try {
     const purchase = await prisma.chapterPurchase.findUnique({
       where: {
@@ -164,9 +168,20 @@ export async function checkChapterOwnershipRepository(
       },
     });
 
+    console.log("[ChapterRepository] Purchase record found:", purchase !== null);
+    if (purchase) {
+      console.log("[ChapterRepository] Purchase record details:", {
+        id: purchase.id,
+        userId: purchase.userId,
+        chapterId: purchase.chapterId,
+        createdAt: purchase.createdAt,
+      });
+    }
+    
     return purchase !== null;
   } catch (error) {
     console.error("[ChapterRepository] Error checking chapter ownership:", error);
+    console.error("[ChapterRepository] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return false;
   }
 }
@@ -253,16 +268,26 @@ export async function createChapterPurchaseRepository(
   userId: string,
   chapterId: string
 ): Promise<void> {
+  console.log("[ChapterRepository] ===== Creating chapter purchase =====");
+  console.log("[ChapterRepository] userId:", userId);
+  console.log("[ChapterRepository] chapterId:", chapterId);
+  
   try {
-    await prisma.chapterPurchase.create({
+    const purchase = await prisma.chapterPurchase.create({
       data: {
         userId,
         chapterId,
       },
     });
-    console.log("[ChapterRepository] Chapter purchase created successfully:", { userId, chapterId });
+    console.log("[ChapterRepository] Chapter purchase created successfully:", {
+      id: purchase.id,
+      userId: purchase.userId,
+      chapterId: purchase.chapterId,
+      createdAt: purchase.createdAt,
+    });
   } catch (error) {
     console.error("[ChapterRepository] Error creating chapter purchase:", error);
+    console.error("[ChapterRepository] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
 }
