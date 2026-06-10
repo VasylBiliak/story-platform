@@ -28,9 +28,16 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
       );
     }
 
-    // Verify chapter exists
+    // Verify chapter exists and include book for ID
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
+      include: {
+        book: {
+          select: {
+            id: true,
+          },
+        },
+      },
     });
 
     if (!chapter) {
@@ -76,8 +83,8 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/books/${chapter.bookId}/chapters/${chapter.slug}?payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/books/${chapter.bookId}/chapters/${chapter.slug}?payment=cancelled`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/book/${chapter.bookId}/chapter/${chapter.slug}?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/book/${chapter.bookId}/chapter/${chapter.slug}?payment=cancelled`,
       metadata: {
         userId: user.id,
         chapterId: chapter.id,

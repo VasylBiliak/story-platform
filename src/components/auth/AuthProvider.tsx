@@ -36,7 +36,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("/api/user/me");
+        const token = localStorage.getItem("token");
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch("/api/auth/me", {
+          headers,
+        });
 
         if (!res.ok) {
           setUser(null);
@@ -58,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // LOGIN
   // =========================
   const login = async (email: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch("/api/user", {
       method: "POST",
       body: JSON.stringify({ email, password }),
       headers: { "Content-Type": "application/json" },
@@ -67,10 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.error || "Login failed");
+      throw new Error(data.message || "Login failed");
     }
 
-    setUser(data.user);
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
+    setUser(data.data);
   };
 
   // =========================
@@ -93,6 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(data.error || "Register failed");
     }
 
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
     setUser(data.user);
   };
 
@@ -100,10 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // LOGOUT
   // =========================
   const logout = async () => {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-    });
-
+    localStorage.removeItem("token");
     setUser(null);
   };
 
