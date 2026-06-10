@@ -3,21 +3,48 @@
 import { Chapter } from '@/lib/types';
 import { LockIcon } from '@/components/ui/LockIcon';
 import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
+import { useState } from 'react';
+
 interface PaywallProps {
   chapter: Chapter;
 }
 
 export function Paywall({ chapter }: PaywallProps) {
-  const handlePurchase = () => {
-    // Placeholder for Stripe integration
-    // In the future, this will:
-    // 1. Check if user is authenticated
-    // 2. Create Stripe checkout session
-    // 3. Handle payment success/failure
-    // 4. Update user's purchase record
-    alert(
-      `Stripe integration coming soon! This would initiate purchase for "${chapter.title}" at $${chapter.finalPrice?.toFixed(2)}`
-    );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePurchase = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chapterId: chapter.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create checkout session');
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      console.error('Purchase error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to initiate purchase');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Content should be empty for non-purchased paid chapters (backend enforces this)
@@ -58,21 +85,33 @@ export function Paywall({ chapter }: PaywallProps) {
         <p className="mb-4 text-text-secondary">
           Purchase this chapter to continue reading
         </p>
+        {error && (
+          <div className="mb-4 p-3 bg-status-error-bg text-status-error rounded-lg text-sm">
+            {error}
+          </div>
+        )}
         <button
           onClick={handlePurchase}
+          disabled={isLoading}
           className="inline-flex items-center justify-center text-lg 
                       cursor-pointer overflow-hidden border-2 border-accent-primary 
                       px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
                       duration-200 
                       hover:bg-accent-primary hover:text-bg-primary hover:border-accent-primary
-                      active:scale-95 
+                      active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         >
-          Buy for ${(chapter.finalPrice || 0).toFixed(2)}
-          {chapter.price && chapter.discount && chapter.discount > 0 && (
-            <span className="ml-2 text-sm line-through text-accent-primary">
-              ${chapter.price.toFixed(2)}
-            </span>
+          {isLoading ? (
+            'Processing...'
+          ) : (
+            <>
+              Buy for ${(chapter.finalPrice || 0).toFixed(2)}
+              {chapter.price && chapter.discount && chapter.discount > 0 && (
+                <span className="ml-2 text-sm line-through text-accent-primary">
+                  ${chapter.price.toFixed(2)}
+                </span>
+              )}
+            </>
           )}
         </button>
         <p className="mt-4 text-xs text-text-tertiary">

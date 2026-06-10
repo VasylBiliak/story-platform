@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Book, Chapter } from "@/lib/types";
 import { Paywall } from "@/components/chapter/Paywall";
 import { LockIcon } from "@/components/ui/LockIcon";
@@ -14,14 +14,24 @@ export default function ChapterPageClient() {
   const params = useParams();
   const bookSlug = params.bookSlug as string;
   const chapterSlug = params.chapterSlug as string;
+  const searchParams = useSearchParams();
 
   const [book, setBook] = useState<Book | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'success' | 'cancelled' | null>(null);
 
   useEffect(() => {
+    // Check for payment status in URL
+    const payment = searchParams.get('payment');
+    if (payment === 'success') {
+      setPaymentStatus('success');
+    } else if (payment === 'cancelled') {
+      setPaymentStatus('cancelled');
+    }
+
     async function loadData() {
       try {
         setLoading(true);
@@ -91,6 +101,18 @@ export default function ChapterPageClient() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Payment Status Banner */}
+      {paymentStatus === 'success' && (
+        <div className="mb-6 p-4 bg-status-success-bg text-status-success rounded-lg">
+          <p className="font-medium">Payment successful! You now have access to this chapter.</p>
+        </div>
+      )}
+      {paymentStatus === 'cancelled' && (
+        <div className="mb-6 p-4 bg-status-warning-bg text-status-warning rounded-lg">
+          <p className="font-medium">Payment cancelled. You can try purchasing this chapter again.</p>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-text-tertiary mb-8">
         <Link href="/" className="hover:text-accent-primary transition-colors">
