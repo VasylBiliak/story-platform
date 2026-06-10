@@ -104,9 +104,13 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
 }
 
 export async function webhookHandler(req: NextRequest) {
+  console.log("[STRIPE_WEBHOOK] Webhook received");
+  
   try {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") as string;
+
+    console.log("[STRIPE_WEBHOOK] Signature present:", !!signature);
 
     if (!signature) {
       return NextResponse.json(
@@ -117,6 +121,7 @@ export async function webhookHandler(req: NextRequest) {
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
+      console.error("[STRIPE_WEBHOOK] Webhook secret not configured");
       return NextResponse.json(
         { success: false, message: "Webhook secret not configured" },
         { status: 500 }
@@ -127,6 +132,7 @@ export async function webhookHandler(req: NextRequest) {
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log("[STRIPE_WEBHOOK] Signature verified, event type:", event.type);
     } catch (err) {
       console.error("[STRIPE_ERROR] WEBHOOK_SIGNATURE_VERIFICATION:", err);
       return NextResponse.json(
@@ -137,11 +143,14 @@ export async function webhookHandler(req: NextRequest) {
 
     // Handle checkout.session.completed event
     if (event.type === "checkout.session.completed") {
+      console.log("[STRIPE_WEBHOOK] Processing checkout.session.completed");
       const session = event.data.object as Stripe.Checkout.Session;
       const { userId, chapterId } = session.metadata as {
         userId: string;
         chapterId: string;
       };
+
+      console.log("[STRIPE_WEBHOOK] Metadata extracted:", { userId, chapterId });
 
       if (!userId || !chapterId) {
         console.error("[STRIPE_ERROR] WEBHOOK_MISSING_METADATA:", session.metadata);
@@ -152,6 +161,7 @@ export async function webhookHandler(req: NextRequest) {
       }
 
       // Verify chapter exists
+      console.log("[STRIPE_WEBHOOK] Verifying chapter exists:", chapterId);
       const chapter = await prisma.chapter.findUnique({
         where: { id: chapterId },
       });
@@ -164,7 +174,10 @@ export async function webhookHandler(req: NextRequest) {
         );
       }
 
+      console.log("[STRIPE_WEBHOOK] Chapter verified:", chapter.title);
+
       // Check if ownership already exists (idempotency)
+      console.log("[STRIPE_WEBHOOK] Checking existing ownership");
       const alreadyOwned = await checkChapterOwnershipRepository(chapterId, userId);
       if (alreadyOwned) {
         console.log("[STRIPE_WEBHOOK] Chapter already owned, skipping");
@@ -175,10 +188,12 @@ export async function webhookHandler(req: NextRequest) {
       }
 
       // Create ChapterPurchase record
+      console.log("[STRIPE_WEBHOOK] Creating chapter purchase record");
       await createChapterPurchaseRepository(userId, chapterId);
-      console.log("[STRIPE_WEBHOOK] Chapter purchase created:", { userId, chapterId });
+      console.log("[STRIPE_WEBHOOK] Chapter purchase created successfully:", { userId, chapterId });
     }
 
+    console.log("[STRIPE_WEBHOOK] Webhook processed successfully");
     return NextResponse.json(
       { success: true, message: "Webhook processed" },
       { status: 200 }

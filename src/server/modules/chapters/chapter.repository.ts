@@ -166,8 +166,7 @@ export async function checkChapterOwnershipRepository(
 
     return purchase !== null;
   } catch (error) {
-    // Table doesn't exist yet - treat as not owned
-    console.warn("[ChapterRepository] ChapterPurchase table not available, treating as not owned");
+    console.error("[ChapterRepository] Error checking chapter ownership:", error);
     return false;
   }
 }
@@ -261,12 +260,9 @@ export async function createChapterPurchaseRepository(
         chapterId,
       },
     });
-  } catch (error: any) {
-    // If table doesn't exist, log a warning but don't crash
-    if (error.code === 'P2021' || error.message?.includes('does not exist')) {
-      console.warn("[ChapterRepository] ChapterPurchase table not available, purchase not created");
-      return;
-    }
+    console.log("[ChapterRepository] Chapter purchase created successfully:", { userId, chapterId });
+  } catch (error) {
+    console.error("[ChapterRepository] Error creating chapter purchase:", error);
     throw error;
   }
 }

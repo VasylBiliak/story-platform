@@ -85,8 +85,7 @@ export async function getBookById(bookId: string, userId?: string) {
           });
           purchased = purchase !== null;
         } catch (error) {
-          // Table doesn't exist yet - treat as not purchased
-          console.warn("[BookService] ChapterPurchase table not available, treating as not purchased");
+          console.error("[BookService] Error checking chapter ownership:", error);
           purchased = false;
         }
       }
