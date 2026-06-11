@@ -65,6 +65,10 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
     }
 
     // Create Stripe Checkout Session
+    console.log("[CHECKOUT] Creating session with metadata:", {
+      userId: user.id,
+      chapterId: chapter.id,
+    });
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -90,6 +94,10 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
         chapterId: chapter.id,
       },
     });
+    console.log("[CHECKOUT] Session created successfully:", {
+      sessionId: session.id,
+      metadata: session.metadata,
+    });
 
     return NextResponse.json(
       {
@@ -111,18 +119,22 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
 }
 
 export async function webhookHandler(req: NextRequest) {
-  console.log("[STRIPE_WEBHOOK] ===== Webhook received =====");
-  console.log("[STRIPE_WEBHOOK] Timestamp:", new Date().toISOString());
-  console.log("[STRIPE_WEBHOOK] Headers:", Object.fromEntries(req.headers.entries()));
+  console.log("[WEBHOOK] ===== Webhook received =====");
+  console.log("[WEBHOOK] Timestamp:", new Date().toISOString());
+  console.log("[WEBHOOK] Method:", req.method);
+  console.log("[WEBHOOK] URL:", req.url);
+  console.log("[WEBHOOK] Headers:", Object.fromEntries(req.headers.entries()));
   
   try {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") as string;
 
-    console.log("[STRIPE_WEBHOOK] Signature present:", !!signature);
-    console.log("[STRIPE_WEBHOOK] Body length:", body.length);
+    console.log("[WEBHOOK] Signature present:", !!signature);
+    console.log("[WEBHOOK] Body length:", body.length);
+    console.log("[WEBHOOK] Body preview:", body.substring(0, 200));
 
     if (!signature) {
+      console.error("[WEBHOOK] ERROR: Missing Stripe signature");
       return NextResponse.json(
         { success: false, message: "Missing Stripe signature" },
         { status: 400 }
@@ -131,23 +143,28 @@ export async function webhookHandler(req: NextRequest) {
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
-      console.error("[STRIPE_WEBHOOK] Webhook secret not configured");
+      console.error("[WEBHOOK] ERROR: Webhook secret not configured");
       return NextResponse.json(
         { success: false, message: "Webhook secret not configured" },
         { status: 500 }
       );
     }
 
+    console.log("[WEBHOOK] Webhook secret configured:", webhookSecret.substring(0, 10) + "...");
+
     let event: Stripe.Event;
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      console.log("[STRIPE_WEBHOOK] Signature verified, event type:", event.type);
+      console.log("[WEBHOOK] Signature verified successfully");
+      console.log("[WEBHOOK] Event type:", event.type);
+      console.log("[WEBHOOK] Event ID:", event.id);
     } catch (err) {
-      console.error("[STRIPE_ERROR] WEBHOOK_SIGNATURE_VERIFICATION:", err);
-      console.error("[STRIPE_ERROR] Error message:", err instanceof Error ? err.message : String(err));
-      console.error("[STRIPE_ERROR] Webhook secret used:", webhookSecret.substring(0, 10) + "...");
-      console.error("[STRIPE_ERROR] Signature:", signature.substring(0, 20) + "...");
+      console.error("[WEBHOOK] ERROR: Signature verification failed");
+      console.error("[WEBHOOK] Error message:", err instanceof Error ? err.message : String(err));
+      console.error("[WEBHOOK] Error stack:", err instanceof Error ? err.stack : 'No stack');
+      console.error("[WEBHOOK] Webhook secret used:", webhookSecret.substring(0, 10) + "...");
+      console.error("[WEBHOOK] Signature:", signature.substring(0, 20) + "...");
       return NextResponse.json(
         { success: false, message: "Invalid signature" },
         { status: 400 }
@@ -156,20 +173,22 @@ export async function webhookHandler(req: NextRequest) {
 
     // Handle checkout.session.completed event
     if (event.type === "checkout.session.completed") {
-      console.log("[STRIPE_WEBHOOK] ===== Processing checkout.session.completed =====");
+      console.log("[WEBHOOK] ===== Processing checkout.session.completed =====");
       const session = event.data.object as Stripe.Checkout.Session;
-      console.log("[STRIPE_WEBHOOK] Session ID:", session.id);
-      console.log("[STRIPE_WEBHOOK] Session metadata:", JSON.stringify(session.metadata, null, 2));
+      console.log("[WEBHOOK] Session ID:", session.id);
+      console.log("[WEBHOOK] Session metadata:", JSON.stringify(session.metadata, null, 2));
+      console.log("[WEBHOOK] Session payment status:", session.payment_status);
       
       const { userId, chapterId } = session.metadata as {
         userId: string;
         chapterId: string;
       };
 
-      console.log("[STRIPE_WEBHOOK] Metadata extracted:", { userId, chapterId });
+      console.log("[WEBHOOK] Extracted metadata:", { userId, chapterId });
 
       if (!userId || !chapterId) {
-        console.error("[STRIPE_ERROR] WEBHOOK_MISSING_METADATA:", session.metadata);
+        console.error("[WEBHOOK] ERROR: Missing required metadata");
+        console.error("[WEBHOOK] Available metadata:", session.metadata);
         return NextResponse.json(
           { success: false, message: "Missing metadata" },
           { status: 400 }
@@ -177,34 +196,42 @@ export async function webhookHandler(req: NextRequest) {
       }
 
       // Verify chapter exists
-      console.log("[STRIPE_WEBHOOK] Verifying chapter exists:", chapterId);
+      console.log("[WEBHOOK] Verifying chapter exists:", chapterId);
       const chapter = await prisma.chapter.findUnique({
         where: { id: chapterId },
       });
 
       if (!chapter) {
-        console.error("[STRIPE_ERROR] WEBHOOK_CHAPTER_NOT_FOUND:", chapterId);
+        console.error("[WEBHOOK] ERROR: Chapter not found:", chapterId);
         return NextResponse.json(
           { success: false, message: "Chapter not found" },
           { status: 404 }
         );
       }
 
-      console.log("[STRIPE_WEBHOOK] Chapter verified:", chapter.title);
+      console.log("[WEBHOOK] Chapter verified:", chapter.title);
+      console.log("[WEBHOOK] Chapter price:", chapter.price);
 
       // Create ChapterPurchase record (idempotent via upsert)
-      console.log("[STRIPE_WEBHOOK] Creating chapter purchase record for userId:", userId, "chapterId:", chapterId);
+      console.log("[WEBHOOK] ===== Creating ChapterPurchase record =====");
+      console.log("[WEBHOOK] userId:", userId);
+      console.log("[WEBHOOK] chapterId:", chapterId);
       await createChapterPurchaseRepository(userId, chapterId);
-      console.log("[STRIPE_WEBHOOK] Chapter purchase created successfully:", { userId, chapterId });
+      console.log("[WEBHOOK] ChapterPurchase record created successfully");
+    } else {
+      console.log("[WEBHOOK] Unhandled event type:", event.type);
     }
 
-    console.log("[STRIPE_WEBHOOK] Webhook processed successfully");
+    console.log("[WEBHOOK] ===== Webhook processed successfully =====");
     return NextResponse.json(
       { success: true, message: "Webhook processed" },
       { status: 200 }
     );
   } catch (error) {
-    console.error("[STRIPE_ERROR] WEBHOOK:", error);
+    console.error("[WEBHOOK] ERROR: Unhandled exception");
+    console.error("[WEBHOOK] Error:", error);
+    console.error("[WEBHOOK] Error message:", error instanceof Error ? error.message : String(error));
+    console.error("[WEBHOOK] Error stack:", error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
       {
         success: false,

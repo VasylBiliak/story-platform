@@ -268,11 +268,12 @@ export async function createChapterPurchaseRepository(
   userId: string,
   chapterId: string
 ): Promise<void> {
-  console.log("[ChapterRepository] ===== Creating chapter purchase (idempotent) =====");
-  console.log("[ChapterRepository] userId:", userId);
-  console.log("[ChapterRepository] chapterId:", chapterId);
+  console.log("[REPOSITORY] ===== Creating ChapterPurchase record =====");
+  console.log("[REPOSITORY] userId:", userId);
+  console.log("[REPOSITORY] chapterId:", chapterId);
   
   try {
+    console.log("[REPOSITORY] Attempting upsert operation...");
     const purchase = await prisma.chapterPurchase.upsert({
       where: {
         userId_chapterId: {
@@ -286,15 +287,18 @@ export async function createChapterPurchaseRepository(
         chapterId,
       },
     });
-    console.log("[ChapterRepository] Chapter purchase created/retrieved successfully:", {
+    console.log("[REPOSITORY] ChapterPurchase upsert successful:", {
       id: purchase.id,
       userId: purchase.userId,
       chapterId: purchase.chapterId,
       createdAt: purchase.createdAt,
     });
   } catch (error) {
-    console.error("[ChapterRepository] Error creating chapter purchase:", error);
-    console.error("[ChapterRepository] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error("[REPOSITORY] ERROR: ChapterPurchase upsert failed");
+    console.error("[REPOSITORY] Error:", error);
+    console.error("[REPOSITORY] Error message:", error instanceof Error ? error.message : String(error));
+    console.error("[REPOSITORY] Error code:", (error as any).code);
+    console.error("[REPOSITORY] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
 }
