@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ChapterImage } from "@/types";
+import { getChapterImage } from "@/lib/utils/imageHelpers";
 
 interface ChapterImagesProps {
   images: ChapterImage[];
@@ -36,6 +37,7 @@ export default function ChapterImages({ images }: ChapterImagesProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {images.map((image, index) => {
           const imageKey = getImageKey(image, index);
+          const imageUrl = getChapterImage(image.url);
           return (
             <figure
               key={imageKey}
@@ -43,7 +45,7 @@ export default function ChapterImages({ images }: ChapterImagesProps) {
             >
               <div className="relative aspect-video bg-bg-tertiary rounded-lg overflow-hidden border border-border">
                 <img
-                  src={image.url}
+                  src={imageUrl}
                   alt={image.caption || "Chapter image"}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${
                     loadedImages.has(imageKey) ? "opacity-100" : "opacity-0"

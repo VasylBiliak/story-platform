@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Chapter } from "@/lib/types";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
+import { PurchasedBadge } from "./PurchasedBadge";
+import { getChapterImage } from "@/lib/utils/imageHelpers";
 
 interface ChapterListItemProps {
   chapter: Chapter;
@@ -10,6 +12,7 @@ interface ChapterListItemProps {
 
 export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
   const firstImage = chapter.images?.[0];
+  const imageUrl = getChapterImage(firstImage?.url);
 
   return (
     <Link
@@ -18,15 +21,13 @@ export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
       transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm"
     >
       <div className="flex items-center gap-3">
-        {firstImage?.url && (
-          <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border border-border">
-            <img
-              src={firstImage.url}
-              alt={firstImage.caption || chapter.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+        <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border border-border">
+          <img
+            src={imageUrl}
+            alt={firstImage?.caption || chapter.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
 
         <div
           className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
@@ -47,19 +48,23 @@ export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
             {chapter.title}
           </h3>
 
-          <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              chapter.isFree
-                ? "bg-status-success-bg text-status-success"
-                : "bg-status-warning-bg text-status-warning"
-            }`}
-          >
-            {chapter.isFree ? "FREE" : "LOCKED"}
-          </span>
+          {chapter.purchased ? (
+            <PurchasedBadge />
+          ) : (
+            <span
+              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                chapter.isFree
+                  ? "bg-status-success-bg text-status-success"
+                  : "bg-status-warning-bg text-status-warning"
+              }`}
+            >
+              {chapter.isFree ? "FREE" : "LOCKED"}
+            </span>
+          )}
         </div>
       </div>
 
-      {!chapter.isFree && chapter.finalPrice !== undefined && (
+      {!chapter.isFree && !chapter.purchased && chapter.finalPrice !== undefined && (
         <div className="text-right">
           <div className="text-sm font-semibold text-accent-primary">
             ${chapter.finalPrice.toFixed(2)}

@@ -7,6 +7,7 @@ import { Book, Chapter, ChapterImage } from "@/types";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
 import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getChapterImage } from "@/lib/utils/imageHelpers";
 import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
 import { mapFormToLocalBook, updateLocalBookFromForm } from "@/lib/local-books/localBookMapper";
 import { BookReplacementModal } from "@/components/modals/BookReplacementModal";
@@ -657,7 +658,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                     {chapter.images.map((img, i) => (
                       <div key={i} className="space-y-2">
                         <div className="relative group">
-                          <img src={img.url} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
+                          <img src={getChapterImage(img.url)} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
                           <button
                             type="button"
                             onClick={() => removeChapterImage(index, i)}
