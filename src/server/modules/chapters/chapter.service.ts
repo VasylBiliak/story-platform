@@ -166,7 +166,7 @@ export async function getChapterByIdWithAccessService(
     // Paid but not purchased: remove content
     return {
       ...chapter,
-      content: "",
+      content: null,
     };
   }
 }
@@ -197,7 +197,7 @@ export async function getChapterBySlugWithAccessService(
     // Paid but not purchased: remove content
     return {
       ...chapter,
-      content: "",
+      content: null,
     };
   }
 }

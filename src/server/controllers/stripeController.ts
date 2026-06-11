@@ -192,19 +192,7 @@ export async function webhookHandler(req: NextRequest) {
 
       console.log("[STRIPE_WEBHOOK] Chapter verified:", chapter.title);
 
-      // Check if ownership already exists (idempotency)
-      console.log("[STRIPE_WEBHOOK] Checking existing ownership for userId:", userId, "chapterId:", chapterId);
-      const alreadyOwned = await checkChapterOwnershipRepository(chapterId, userId);
-      console.log("[STRIPE_WEBHOOK] Ownership check result:", alreadyOwned);
-      if (alreadyOwned) {
-        console.log("[STRIPE_WEBHOOK] Chapter already owned, skipping purchase creation");
-        return NextResponse.json(
-          { success: true, message: "Already owned" },
-          { status: 200 }
-        );
-      }
-
-      // Create ChapterPurchase record
+      // Create ChapterPurchase record (idempotent via upsert)
       console.log("[STRIPE_WEBHOOK] Creating chapter purchase record for userId:", userId, "chapterId:", chapterId);
       await createChapterPurchaseRepository(userId, chapterId);
       console.log("[STRIPE_WEBHOOK] Chapter purchase created successfully:", { userId, chapterId });

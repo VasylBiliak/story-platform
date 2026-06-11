@@ -268,18 +268,25 @@ export async function createChapterPurchaseRepository(
   userId: string,
   chapterId: string
 ): Promise<void> {
-  console.log("[ChapterRepository] ===== Creating chapter purchase =====");
+  console.log("[ChapterRepository] ===== Creating chapter purchase (idempotent) =====");
   console.log("[ChapterRepository] userId:", userId);
   console.log("[ChapterRepository] chapterId:", chapterId);
   
   try {
-    const purchase = await prisma.chapterPurchase.create({
-      data: {
+    const purchase = await prisma.chapterPurchase.upsert({
+      where: {
+        userId_chapterId: {
+          userId,
+          chapterId,
+        },
+      },
+      update: {},
+      create: {
         userId,
         chapterId,
       },
     });
-    console.log("[ChapterRepository] Chapter purchase created successfully:", {
+    console.log("[ChapterRepository] Chapter purchase created/retrieved successfully:", {
       id: purchase.id,
       userId: purchase.userId,
       chapterId: purchase.chapterId,

@@ -79,13 +79,12 @@ export async function getBookById(bookId: string, userId?: string) {
   console.log("[BookService] Book found:", book.title);
   console.log("[BookService] Number of chapters:", book.chapters.length);
 
-  // Apply access control to chapters
+  // Apply access control to chapters using ChapterPurchase table
   const chaptersWithAccess = await Promise.all(
     book.chapters.map(async (chapter) => {
       let purchased = false;
       if (userId && chapter.price > 0) {
         try {
-          console.log("[BookService] Checking ownership for chapter:", chapter.id, "userId:", userId);
           const purchase = await prisma.chapterPurchase.findUnique({
             where: {
               userId_chapterId: {
@@ -95,18 +94,8 @@ export async function getBookById(bookId: string, userId?: string) {
             },
           });
           purchased = purchase !== null;
-          console.log("[BookService] Chapter ownership check result:", chapter.id, purchased);
-          if (purchase) {
-            console.log("[BookService] Purchase record found:", {
-              id: purchase.id,
-              userId: purchase.userId,
-              chapterId: purchase.chapterId,
-              createdAt: purchase.createdAt,
-            });
-          }
         } catch (error) {
           console.error("[BookService] Error checking chapter ownership:", error);
-          console.error("[BookService] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
           purchased = false;
         }
       }
@@ -114,13 +103,10 @@ export async function getBookById(bookId: string, userId?: string) {
       const chapterWithPricing = applyComputedPricing(chapter) as any;
       chapterWithPricing.purchased = purchased;
 
-      console.log("[BookService] Chapter:", chapter.id, "price:", chapter.price, "purchased:", purchased);
-
       // Apply access control: remove content for paid chapters not purchased
       const isFree = chapter.price === 0;
       if (!isFree && !purchased) {
-        chapterWithPricing.content = "";
-        console.log("[BookService] Content removed for unpaid chapter:", chapter.id);
+        chapterWithPricing.content = null;
       }
 
       return chapterWithPricing;

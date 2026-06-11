@@ -98,7 +98,7 @@ export class ChapterService {
 
     if (!chapter) return null;
 
-    // Check ownership for paid chapters
+    // Check ownership using ChapterPurchase table
     let purchased = false;
     if (userId && chapter.price > 0) {
       try {
@@ -112,8 +112,7 @@ export class ChapterService {
         });
         purchased = purchase !== null;
       } catch (error) {
-        // Table doesn't exist yet - treat as not purchased
-        console.warn("[ChapterService] ChapterPurchase table not available, treating as not purchased");
+        console.error("[ChapterService] Error checking ownership:", error);
         purchased = false;
       }
     }
@@ -125,7 +124,7 @@ export class ChapterService {
     // Apply access control: remove content for paid chapters not purchased
     const isFree = chapter.price === 0;
     if (!isFree && !purchased) {
-      chapterWithPricing.content = "";
+      chapterWithPricing.content = null;
     }
 
     return chapterWithPricing;
@@ -139,7 +138,7 @@ export class ChapterService {
       },
     });
 
-    // Check ownership for each paid chapter
+    // Check ownership for each paid chapter using ChapterPurchase table
     const chaptersWithOwnership = await Promise.all(
       chapters.map(async (chapter) => {
         let purchased = false;
@@ -155,8 +154,7 @@ export class ChapterService {
             });
             purchased = purchase !== null;
           } catch (error) {
-            // Table doesn't exist yet - treat as not purchased
-            console.warn("[ChapterService] ChapterPurchase table not available, treating as not purchased");
+            console.error("[ChapterService] Error checking ownership:", error);
             purchased = false;
           }
         }
@@ -168,7 +166,7 @@ export class ChapterService {
         // Apply access control: remove content for paid chapters not purchased
         const isFree = chapter.price === 0;
         if (!isFree && !purchased) {
-          chapterWithPricing.content = "";
+          chapterWithPricing.content = null;
         }
 
         return chapterWithPricing;
@@ -191,19 +189,10 @@ export class ChapterService {
 
   static async createChapterPurchase(userId: string, chapterId: string) {
     try {
-      await prisma.chapterPurchase.create({
-        data: {
-          userId,
-          chapterId,
-        },
-      });
+      const { createChapterPurchaseRepository } = await import("@/server/modules/chapters/chapter.repository");
+      await createChapterPurchaseRepository(userId, chapterId);
     } catch (error: any) {
       console.error("[ChapterService] Create purchase error:", error);
-      // If table doesn't exist, log a warning but don't crash
-      if (error.code === 'P2021' || error.message?.includes('does not exist')) {
-        console.warn("[ChapterService] ChapterPurchase table not available, purchase not created");
-        return;
-      }
       throw new Error("Failed to create chapter purchase");
     }
   }
