@@ -5,6 +5,7 @@ import { BookOpenIcon } from "@/components/ui/BookOpenIcon";
 import { PurchasedBadge } from "./PurchasedBadge";
 import { getChapterImage } from "@/lib/utils/imageHelpers";
 
+
 interface ChapterListItemProps {
   chapter: Chapter;
   bookSlug: string;
@@ -20,15 +21,19 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
   const content = (
     <>
       <div className="flex items-center gap-3">
-        {showCheckbox && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggle?.(chapter.id)}
-            className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
+        {/* Reserved checkbox column - always rendered to maintain alignment */}
+        <div className="w-5 h-5 flex-shrink-0">
+          {showCheckbox ? (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggle?.(chapter.id)}
+              className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Select chapter ${chapter.title}`}
+            />
+          ) : null}
+        </div>
         
         <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border border-border">
           <img
@@ -45,11 +50,14 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
               : "bg-status-warning-bg text-status-warning"
           }`}
         >
-          {chapter.isFree ? (
-            <BookOpenIcon className="w-5 h-5" />
-          ) : (
-            <LockIcon className="w-5 h-5" />
-          )}
+{chapter.isFree ? (
+  <BookOpenIcon className="w-5 h-5" />
+) : chapter.purchased ? (
+  <BookOpenIcon className="w-5 h-5" />
+) : (
+  <LockIcon className="w-5 h-5" />
+)}
+          
         </div>
 
         <div>

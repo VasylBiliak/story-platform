@@ -8,6 +8,7 @@ import { Book, Chapter } from "@/lib/types";
 import { getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
 import { getChaptersByBookSorted as getStaticChaptersByBook } from "@/lib/api/chapters";
 import { ChapterListItem } from "@/components/chapter/ChapterListItem";
+import { BulkPurchaseSummary } from "@/components/chapter/BulkPurchaseSummary";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getLocalBookById, getLocalChaptersByBookId } from "@/lib/local-books/localBookStorage";
 import { LocalBook, LocalChapter } from "@/lib/local-books/localBook.types";
@@ -89,15 +90,14 @@ export default function BookPageClient() {
     });
   };
 
-  // Handle select all
-  const handleSelectAll = () => {
-    const eligibleIds = eligibleChapters.map((c) => c.id);
-    setSelectedChapterIds(new Set(eligibleIds));
-  };
-
-  // Handle deselect all
-  const handleDeselectAll = () => {
-    setSelectedChapterIds(new Set());
+  // Handle select all toggle
+  const handleSelectAllToggle = () => {
+    if (selectedChapterIds.size === eligibleChapters.length) {
+      setSelectedChapterIds(new Set());
+    } else {
+      const eligibleIds = eligibleChapters.map((c) => c.id);
+      setSelectedChapterIds(new Set(eligibleIds));
+    }
   };
 
   // Handle bulk purchase
@@ -262,64 +262,30 @@ export default function BookPageClient() {
         </div>
 
         {/* Purchase Summary */}
-        {eligibleChapters.length > 0 && (
-          <div className="mb-6 p-4 bg-bg-secondary rounded-xl border border-border">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  {selectedChapterIds.size > 0 && (
-                    <button
-                      onClick={handleDeselectAll}
-                      className="text-sm text-accent-primary hover:text-accent-primary-hover"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <span className="text-text-secondary">
-                    Selected: <span className="font-semibold text-text-primary">{selectedChapterIds.size}</span> / {eligibleChapters.length} chapters
-                  </span>
-                </div>
-                <div className="text-text-secondary">
-                  Total: <span className="font-semibold text-accent-primary">${totalPrice.toFixed(2)}</span>
-                </div>
-              </div>
-              
-              <button
-                onClick={handleBulkPurchase}
-                disabled={selectedChapterIds.size === 0 || isBulkPurchasing}
-                className="inline-flex items-center justify-center text-lg 
-                          cursor-pointer overflow-hidden border-2 border-accent-primary 
-                          px-6 py-3 tracking-[0.15em] text-accent-primary transition-all 
-                          duration-200 
-                          hover:bg-accent-primary hover:text-bg-primary hover:border-accent-primary
-                          active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-              >
-                {isBulkPurchasing ? (
-                  'Processing...'
-                ) : (
-                  <>Buy Selected (${totalPrice.toFixed(2)})</>
-                )}
-              </button>
-            </div>
-            
-            {bulkPurchaseError && (
-              <div className="mt-3 p-3 bg-status-error-bg text-status-error rounded-lg text-sm">
-                {bulkPurchaseError}
-              </div>
-            )}
-          </div>
+        {selectedChapterIds.size > 0 && (
+          <BulkPurchaseSummary
+            selectedCount={selectedChapterIds.size}
+            totalCount={eligibleChapters.length}
+            totalPrice={totalPrice}
+            onPurchase={handleBulkPurchase}
+            isPurchasing={isBulkPurchasing}
+            error={bulkPurchaseError}
+          />
         )}
 
         {/* Select All Control (Top) */}
         {eligibleChapters.length > 0 && (
-          <div className="mb-4 flex items-center gap-4">
-            <button
-              onClick={selectedChapterIds.size === eligibleChapters.length ? handleDeselectAll : handleSelectAll}
-              className="text-sm font-medium text-accent-primary hover:text-accent-primary-hover"
-            >
-              {selectedChapterIds.size === eligibleChapters.length ? 'Deselect All' : 'Select All'}
-            </button>
+          <div className="mb-4 flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedChapterIds.size === eligibleChapters.length}
+                onChange={handleSelectAllToggle}
+                className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
+                aria-label="Select all purchasable chapters"
+              />
+              <span className="text-sm font-medium text-text-primary">Select All</span>
+            </label>
             <span className="text-xs text-text-tertiary">
               ({eligibleChapters.length} premium chapters available)
             </span>
@@ -347,13 +313,17 @@ export default function BookPageClient() {
 
         {/* Select All Control (Bottom) - Only show if >10 chapters */}
         {showBottomSelectAll && eligibleChapters.length > 0 && (
-          <div className="mt-4 flex items-center gap-4">
-            <button
-              onClick={selectedChapterIds.size === eligibleChapters.length ? handleDeselectAll : handleSelectAll}
-              className="text-sm font-medium text-accent-primary hover:text-accent-primary-hover"
-            >
-              {selectedChapterIds.size === eligibleChapters.length ? 'Deselect All' : 'Select All'}
-            </button>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedChapterIds.size === eligibleChapters.length}
+                onChange={handleSelectAllToggle}
+                className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
+                aria-label="Select all purchasable chapters"
+              />
+              <span className="text-sm font-medium text-text-primary">Select All</span>
+            </label>
             <span className="text-xs text-text-tertiary">
               ({eligibleChapters.length} premium chapters available)
             </span>
