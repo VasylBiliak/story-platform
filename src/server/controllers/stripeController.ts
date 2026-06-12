@@ -118,6 +118,138 @@ export async function createCheckoutSessionHandler(req: NextRequest) {
   }
 }
 
+export async function createBulkCheckoutSessionHandler(req: NextRequest) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { chapterIds } = body;
+
+    if (!chapterIds || !Array.isArray(chapterIds) || chapterIds.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Chapter IDs array is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify all chapters exist, are paid, and not already owned
+    const chapters = await prisma.chapter.findMany({
+      where: {
+        id: { in: chapterIds },
+      },
+      include: {
+        book: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (chapters.length !== chapterIds.length) {
+      return NextResponse.json(
+        { success: false, message: "One or more chapters not found" },
+        { status: 404 }
+      );
+    }
+
+    // Validate each chapter
+    const validChapters = [];
+    for (const chapter of chapters) {
+      // Verify chapter is paid
+      if (chapter.price === 0) {
+        return NextResponse.json(
+          { success: false, message: `Chapter "${chapter.title}" is free` },
+          { status: 400 }
+        );
+      }
+
+      // Verify user does not already own chapter
+      const alreadyOwned = await checkChapterOwnershipRepository(chapter.id, user.id);
+      if (alreadyOwned) {
+        return NextResponse.json(
+          { success: false, message: `Chapter "${chapter.title}" already purchased` },
+          { status: 400 }
+        );
+      }
+
+      validChapters.push(chapter);
+    }
+
+    // Calculate total price using discounted prices if available
+    let totalPrice = 0;
+    const lineItems = validChapters.map((chapter) => {
+      const finalPrice = chapter.discount && chapter.discount > 0
+        ? chapter.price * (1 - chapter.discount / 100)
+        : chapter.price;
+      totalPrice += finalPrice;
+
+      return {
+        price_data: {
+          currency: "cad",
+          product_data: {
+            name: chapter.title,
+            metadata: {
+              chapterId: chapter.id,
+            },
+          },
+          unit_amount: Math.round(finalPrice * 100), // Convert to cents
+        },
+        quantity: 1,
+      };
+    });
+
+    // Create Stripe Checkout Session
+    console.log("[BULK_CHECKOUT] Creating session with metadata:", {
+      userId: user.id,
+      chapterIds: JSON.stringify(chapterIds),
+      chapterCount: chapterIds.length,
+      totalPrice,
+    });
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: lineItems,
+      mode: "payment",
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/book/${validChapters[0].bookId}?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/book/${validChapters[0].bookId}?payment=cancelled`,
+      metadata: {
+        userId: user.id,
+        chapterIds: JSON.stringify(chapterIds),
+        isBulkPurchase: "true",
+      },
+    });
+
+    console.log("[BULK_CHECKOUT] Session created successfully:", {
+      sessionId: session.id,
+      metadata: session.metadata,
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        checkoutUrl: session.url,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[STRIPE_ERROR] CREATE_BULK_CHECKOUT_SESSION:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function webhookHandler(req: NextRequest) {
   console.log("[WEBHOOK] ===== Webhook received =====");
   console.log("[WEBHOOK] Timestamp:", new Date().toISOString());
@@ -179,45 +311,103 @@ export async function webhookHandler(req: NextRequest) {
       console.log("[WEBHOOK] Session metadata:", JSON.stringify(session.metadata, null, 2));
       console.log("[WEBHOOK] Session payment status:", session.payment_status);
       
-      const { userId, chapterId } = session.metadata as {
+      const { userId, chapterId, chapterIds, isBulkPurchase } = session.metadata as {
         userId: string;
-        chapterId: string;
+        chapterId?: string;
+        chapterIds?: string;
+        isBulkPurchase?: string;
       };
 
-      console.log("[WEBHOOK] Extracted metadata:", { userId, chapterId });
+      console.log("[WEBHOOK] Extracted metadata:", { userId, chapterId, chapterIds, isBulkPurchase });
 
-      if (!userId || !chapterId) {
-        console.error("[WEBHOOK] ERROR: Missing required metadata");
+      if (!userId) {
+        console.error("[WEBHOOK] ERROR: Missing userId in metadata");
         console.error("[WEBHOOK] Available metadata:", session.metadata);
         return NextResponse.json(
-          { success: false, message: "Missing metadata" },
+          { success: false, message: "Missing userId metadata" },
           { status: 400 }
         );
       }
 
-      // Verify chapter exists
-      console.log("[WEBHOOK] Verifying chapter exists:", chapterId);
-      const chapter = await prisma.chapter.findUnique({
-        where: { id: chapterId },
-      });
+      // Handle bulk purchase
+      if (isBulkPurchase === "true" && chapterIds) {
+        console.log("[WEBHOOK] ===== Processing bulk purchase =====");
+        try {
+          const ids = JSON.parse(chapterIds) as string[];
+          console.log("[WEBHOOK] Chapter IDs to purchase:", ids);
 
-      if (!chapter) {
-        console.error("[WEBHOOK] ERROR: Chapter not found:", chapterId);
+          // Verify all chapters exist
+          const chapters = await prisma.chapter.findMany({
+            where: { id: { in: ids } },
+          });
+
+          if (chapters.length !== ids.length) {
+            console.error("[WEBHOOK] ERROR: Some chapters not found");
+            return NextResponse.json(
+              { success: false, message: "Some chapters not found" },
+              { status: 404 }
+            );
+          }
+
+          // Create ChapterPurchase records for each chapter (idempotent via upsert)
+          console.log("[WEBHOOK] ===== Creating ChapterPurchase records =====");
+          for (const chapter of chapters) {
+            console.log("[WEBHOOK] Creating purchase for chapter:", chapter.id);
+            await createChapterPurchaseRepository(userId, chapter.id);
+          }
+          console.log("[WEBHOOK] All ChapterPurchase records created successfully");
+        } catch (error) {
+          console.error("[WEBHOOK] ERROR: Failed to process bulk purchase");
+          console.error("[WEBHOOK] Error:", error);
+          return NextResponse.json(
+            { success: false, message: "Failed to process bulk purchase" },
+            { status: 500 }
+          );
+        }
+      } 
+      // Handle single chapter purchase (existing logic)
+      else if (chapterId) {
+        console.log("[WEBHOOK] ===== Processing single chapter purchase =====");
+        if (!chapterId) {
+          console.error("[WEBHOOK] ERROR: Missing chapterId in metadata");
+          console.error("[WEBHOOK] Available metadata:", session.metadata);
+          return NextResponse.json(
+            { success: false, message: "Missing chapterId metadata" },
+            { status: 400 }
+          );
+        }
+
+        // Verify chapter exists
+        console.log("[WEBHOOK] Verifying chapter exists:", chapterId);
+        const chapter = await prisma.chapter.findUnique({
+          where: { id: chapterId },
+        });
+
+        if (!chapter) {
+          console.error("[WEBHOOK] ERROR: Chapter not found:", chapterId);
+          return NextResponse.json(
+            { success: false, message: "Chapter not found" },
+            { status: 404 }
+          );
+        }
+
+        console.log("[WEBHOOK] Chapter verified:", chapter.title);
+        console.log("[WEBHOOK] Chapter price:", chapter.price);
+
+        // Create ChapterPurchase record (idempotent via upsert)
+        console.log("[WEBHOOK] ===== Creating ChapterPurchase record =====");
+        console.log("[WEBHOOK] userId:", userId);
+        console.log("[WEBHOOK] chapterId:", chapterId);
+        await createChapterPurchaseRepository(userId, chapterId);
+        console.log("[WEBHOOK] ChapterPurchase record created successfully");
+      } else {
+        console.error("[WEBHOOK] ERROR: Missing chapterId or chapterIds in metadata");
+        console.error("[WEBHOOK] Available metadata:", session.metadata);
         return NextResponse.json(
-          { success: false, message: "Chapter not found" },
-          { status: 404 }
+          { success: false, message: "Missing chapter metadata" },
+          { status: 400 }
         );
       }
-
-      console.log("[WEBHOOK] Chapter verified:", chapter.title);
-      console.log("[WEBHOOK] Chapter price:", chapter.price);
-
-      // Create ChapterPurchase record (idempotent via upsert)
-      console.log("[WEBHOOK] ===== Creating ChapterPurchase record =====");
-      console.log("[WEBHOOK] userId:", userId);
-      console.log("[WEBHOOK] chapterId:", chapterId);
-      await createChapterPurchaseRepository(userId, chapterId);
-      console.log("[WEBHOOK] ChapterPurchase record created successfully");
     } else {
       console.log("[WEBHOOK] Unhandled event type:", event.type);
     }

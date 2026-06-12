@@ -8,19 +8,28 @@ import { getChapterImage } from "@/lib/utils/imageHelpers";
 interface ChapterListItemProps {
   chapter: Chapter;
   bookSlug: string;
+  isSelected?: boolean;
+  onToggle?: (chapterId: string) => void;
+  showCheckbox?: boolean;
 }
 
-export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
+export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggle, showCheckbox = false }: ChapterListItemProps) {
   const firstImage = chapter.images?.[0];
   const imageUrl = getChapterImage(firstImage?.url);
 
-  return (
-    <Link
-      href={`/book/${bookSlug}/chapter/${chapter.slug}`}
-      className="group flex items-center justify-between p-4 rounded-lg border border-border
-      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm"
-    >
+  const content = (
+    <>
       <div className="flex items-center gap-3">
+        {showCheckbox && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggle?.(chapter.id)}
+            className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+        
         <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border border-border">
           <img
             src={imageUrl}
@@ -79,6 +88,27 @@ export function ChapterListItem({ chapter, bookSlug }: ChapterListItemProps) {
           )}
         </div>
       )}
+    </>
+  );
+
+  if (showCheckbox) {
+    return (
+      <div className="group flex items-center justify-between p-4 rounded-lg border border-border
+      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm cursor-pointer"
+      onClick={() => onToggle?.(chapter.id)}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/book/${bookSlug}/chapter/${chapter.slug}`}
+      className="group flex items-center justify-between p-4 rounded-lg border border-border
+      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm"
+    >
+      {content}
     </Link>
   );
 }

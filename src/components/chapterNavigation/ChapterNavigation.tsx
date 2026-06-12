@@ -119,7 +119,7 @@ export function ChapterNavigation({ chapters, currentSlug, bookId }: Props) {
     'px-3 py-1.5 text-sm rounded-md border border-accent-primary text-accent-primary font-medium';
 
   return (
-    <div className="mt-8 bg-bg-secondary border border-border rounded-xl p-4 sm:p-6">
+    <div className="mt-4 mb-4 bg-bg-secondary border border-border rounded-xl p-4 sm:p-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <NavButton

@@ -132,12 +132,13 @@ export default function ChapterPageClient() {
         </svg>
         <span className="text-text-primary truncate max-w-xs">{chapter.title}</span>
       </nav>
-
-
+      
       {/* Chapter Header */}
+      
+      
       <header className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+          {/*<div className="flex items-center gap-3">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${chapter.isFree
                 ? "bg-status-success-bg text-status-success"
@@ -175,6 +176,7 @@ export default function ChapterPageClient() {
               </div>
             )}
           </div>
+          */}
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
           {chapter.title}
@@ -191,6 +193,7 @@ export default function ChapterPageClient() {
         </p>
       </header>
 
+      <ChapterNavigation chapters={chapters} currentSlug={chapter.slug} bookId={book.id} />
       {/* Chapter Content */}
       <article className="bg-bg-secondary rounded-xl border border-border overflow-hidden">
         {chapter.isFree || chapter.purchased ? (
