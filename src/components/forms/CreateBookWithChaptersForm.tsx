@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter, ChapterImage } from "@/types";
 import { DEFAULT_IMG } from "@/data/books";
+import { getChapterImage } from "@/lib/utils/imageHelpers";
 
 interface Props {
   onCreate: (book: Book, chapters: Chapter[]) => void;
@@ -367,7 +368,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
                     {chapter.images.map((img, i) => (
                       <div key={i} className="space-y-2">
                         <div className="relative group">
-                          <img src={img.url} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
+                          <img src={getChapterImage(img.url)} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
                           <button
                             type="button"
                             onClick={() => removeChapterImage(index, i)}

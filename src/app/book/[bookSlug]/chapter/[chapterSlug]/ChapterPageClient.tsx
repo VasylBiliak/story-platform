@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Book, Chapter } from "@/lib/types";
 import { Paywall } from "@/components/chapter/Paywall";
 import { LockIcon } from "@/components/ui/LockIcon";
@@ -14,14 +14,24 @@ export default function ChapterPageClient() {
   const params = useParams();
   const bookSlug = params.bookSlug as string;
   const chapterSlug = params.chapterSlug as string;
+  const searchParams = useSearchParams();
 
   const [book, setBook] = useState<Book | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'success' | 'cancelled' | null>(null);
 
   useEffect(() => {
+    // Check for payment status in URL
+    const payment = searchParams.get('payment');
+    if (payment === 'success') {
+      setPaymentStatus('success');
+    } else if (payment === 'cancelled') {
+      setPaymentStatus('cancelled');
+    }
+
     async function loadData() {
       try {
         setLoading(true);
@@ -91,6 +101,18 @@ export default function ChapterPageClient() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Payment Status Banner */}
+      {paymentStatus === 'success' && (
+        <div className="mb-6 p-4 bg-status-success-bg text-status-success rounded-lg">
+          <p className="font-medium">Payment successful! You now have access to this chapter.</p>
+        </div>
+      )}
+      {paymentStatus === 'cancelled' && (
+        <div className="mb-6 p-4 bg-status-warning-bg text-status-warning rounded-lg">
+          <p className="font-medium">Payment cancelled. You can try purchasing this chapter again.</p>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-text-tertiary mb-8">
         <Link href="/" className="hover:text-accent-primary transition-colors">
@@ -110,12 +132,13 @@ export default function ChapterPageClient() {
         </svg>
         <span className="text-text-primary truncate max-w-xs">{chapter.title}</span>
       </nav>
-
-
+      
       {/* Chapter Header */}
+      
+      
       <header className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+          {/*<div className="flex items-center gap-3">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${chapter.isFree
                 ? "bg-status-success-bg text-status-success"
@@ -153,6 +176,7 @@ export default function ChapterPageClient() {
               </div>
             )}
           </div>
+          */}
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
           {chapter.title}
@@ -169,9 +193,10 @@ export default function ChapterPageClient() {
         </p>
       </header>
 
+      <ChapterNavigation chapters={chapters} currentSlug={chapter.slug} bookId={book.id} />
       {/* Chapter Content */}
       <article className="bg-bg-secondary rounded-xl border border-border overflow-hidden">
-        {chapter.isFree ? (
+        {chapter.isFree || chapter.purchased ? (
           <div className="p-8 sm:p-12">
             <div className="prose prose-lg max-w-none">
               {chapter.content.split("\n\n").map((paragraph, index) => (
@@ -189,43 +214,25 @@ export default function ChapterPageClient() {
                 <p className="text-text-secondary mb-6">
                   {chapter.isFree
                     ? "This chapter is free to read. Enjoy the content!"
-                    : "Unlock this premium chapter to continue reading."
+                    : "You've purchased this chapter. Thanks for your support!"
                   }
                 </p>
 
                 {<Link
-                  href={chapter.isFree ? `/book/${book.id}` : "#"}
-                  className={`inline-flex items-center justify-center px-8 py-3 font-medium rounded-lg transition-all transform hover:scale-105 ${chapter.isFree
-                    ? "bg-status-success text-white hover:bg-status-success-hover"
-                    : "bg-accent-primary text-white hover:bg-accent-primary-hover shadow-lg"
-                    }`}
+                  href={`/book/${book.id}`}
+                  className={`inline-flex items-center justify-center px-8 py-3 font-medium rounded-lg transition-all transform hover:scale-105 bg-status-success text-white hover:bg-status-success-hover`}
                 >
-                  {chapter.isFree ? (
-                    <button
-                      type="button"
-                      className=" display flex items-center justify-center text-lg 
-                      cursor-pointer overflow-hidden border-2 border-accent-primary 
-                      px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
-                      duration-200 
-                      hover:bg-accent-primary hover:text-bg-primary active:scale-95 
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                    >
-                      <BookOpenIcon className="w-4 h-4 mr-2" />Read for Free
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className=" display flex items-center justify-center text-lg 
-                      cursor-pointer overflow-hidden border-2 border-accent-primary 
-                      px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
-                      duration-200 
-                      hover:bg-accent-primary hover:text-bg-primary active:scale-95 
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                    >
-                      Buy for ${(chapter.finalPrice || 0).toFixed(2)}
-                    </button>
-
-                  )}
+                  <button
+                    type="button"
+                    className=" display flex items-center justify-center text-lg 
+                    cursor-pointer overflow-hidden border-2 border-accent-primary 
+                    px-8 py-4 tracking-[0.15em] text-accent-primary transition-all 
+                    duration-200 
+                    hover:bg-accent-primary hover:text-bg-primary active:scale-95 
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                  >
+                    <BookOpenIcon className="w-4 h-4 mr-2" />Continue Reading
+                  </button>
                 </Link>}
               </div>
             </div>

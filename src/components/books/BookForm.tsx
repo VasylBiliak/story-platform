@@ -7,6 +7,7 @@ import { Book, Chapter, ChapterImage } from "@/types";
 import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
 import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getChapterImage } from "@/lib/utils/imageHelpers";
 import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
 import { mapFormToLocalBook, updateLocalBookFromForm } from "@/lib/local-books/localBookMapper";
 import { BookReplacementModal } from "@/components/modals/BookReplacementModal";
@@ -56,13 +57,13 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
   if (book && chapters) {
     return {
       book: {
-        title: book.title,
-        description: book.description,
-        cover: book.cover,
+        title: book.title ?? '',
+        description: book.description ?? '',
+        cover: book.cover ?? '',
       },
       chapters: chapters.map((c) => ({
-        title: c.title,
-        content: c.content,
+        title: c.title ?? '',
+        content: c.content ?? '',
         isFree: c.isFree,
         price: c.price,
         discount: c.discount,
@@ -256,14 +257,14 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     form.book.title.trim().length > 0 &&
     form.book.title.trim().length <= INPUT_LIMITS.bookTitle &&
     form.book.description.trim().length <= INPUT_LIMITS.description &&
-    form.book.cover.trim().length > 0 &&
+    (form.book.cover ?? '').trim().length > 0 &&
     form.chapters.length >= 1 &&
     form.chapters.every(
       (c) =>
-        c.title.trim().length > 0 &&
-        c.title.trim().length <= INPUT_LIMITS.chapterTitle &&
-        c.content.trim().length > 0 &&
-        c.content.trim().length <= INPUT_LIMITS.chapterContent &&
+        (c.title ?? '').trim().length > 0 &&
+        (c.title ?? '').trim().length <= INPUT_LIMITS.chapterTitle &&
+        (c.content ?? '').trim().length > 0 &&
+        (c.content ?? '').trim().length <= INPUT_LIMITS.chapterContent &&
         (c.isFree || (c.price !== undefined && c.price >= 0)) &&
         (c.discount === undefined || (Number.isInteger(c.discount) && c.discount >= 0 && c.discount <= 100)) &&
         !c.discountError &&
@@ -359,22 +360,22 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     setApiError(null);
 
     const bookPayload = {
-      title: form.book.title.trim(),
-      description: form.book.description.trim(),
-      cover: form.book.cover.trim(),
+      title: (form.book.title ?? '').trim(),
+      description: (form.book.description ?? '').trim(),
+      cover: (form.book.cover ?? '').trim(),
       author: user?.name || "Anonymous",
       chapters: form.chapters.map((c, i) => ({
         ...(c.id && { id: c.id }), // CRITICAL: Send chapter.id for existing chapters only
-        title: c.title.trim(),
-        slug: slugify(c.title) || `chapter-${i + 1}`,
-        content: c.content.trim(),
+        title: (c.title ?? '').trim(),
+        slug: slugify(c.title ?? '') || `chapter-${i + 1}`,
+        content: (c.content ?? '').trim(),
         isFree: c.isFree,
         price: c.isFree ? 0 : (c.price ?? 0),
         discount: c.isFree ? 0 : (c.discount ?? 0),
         images: c.images.map((img) => ({
           ...(img.id && { id: img.id }), // CRITICAL: Send image.id for existing images only
           url: img.url,
-          caption: img.caption ?? "",
+          caption: (img.caption ?? '').trim() || "",
         })),
       })),
     };
@@ -657,7 +658,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                     {chapter.images.map((img, i) => (
                       <div key={i} className="space-y-2">
                         <div className="relative group">
-                          <img src={img.url} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
+                          <img src={getChapterImage(img.url)} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
                           <button
                             type="button"
                             onClick={() => removeChapterImage(index, i)}

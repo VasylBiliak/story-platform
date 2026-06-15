@@ -28,13 +28,14 @@ export interface UpdateChapterDto {
 export interface ChapterWithImages {
   id: string;
   title: string;
-  content: string;
+  content: string | null;
   slug: string;
   price: number;
   discount: number | null;
   bookId: string;
   createdAt: Date;
   images: ChapterImage[];
+  purchased?: boolean;
 }
 
 export interface ChapterImage {

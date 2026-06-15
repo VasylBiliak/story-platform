@@ -149,3 +149,156 @@ export async function getBookIdByChapterRepository(
 
   return chapter?.bookId ?? null;
 }
+
+export async function checkChapterOwnershipRepository(
+  chapterId: string,
+  userId: string
+): Promise<boolean> {
+  console.log("[ChapterRepository] ===== Checking chapter ownership =====");
+  console.log("[ChapterRepository] chapterId:", chapterId);
+  console.log("[ChapterRepository] userId:", userId);
+  
+  try {
+    const purchase = await prisma.chapterPurchase.findUnique({
+      where: {
+        userId_chapterId: {
+          userId,
+          chapterId,
+        },
+      },
+    });
+
+    console.log("[ChapterRepository] Purchase record found:", purchase !== null);
+    if (purchase) {
+      console.log("[ChapterRepository] Purchase record details:", {
+        id: purchase.id,
+        userId: purchase.userId,
+        chapterId: purchase.chapterId,
+        createdAt: purchase.createdAt,
+      });
+    }
+    
+    return purchase !== null;
+  } catch (error) {
+    console.error("[ChapterRepository] Error checking chapter ownership:", error);
+    console.error("[ChapterRepository] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    return false;
+  }
+}
+
+export async function getChapterByIdWithOwnershipRepository(
+  chapterId: string,
+  userId?: string
+): Promise<ChapterWithImages & { purchased?: boolean } | null> {
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: chapterId },
+    include: {
+      images: true,
+    },
+  });
+
+  if (!chapter) {
+    return null;
+  }
+
+  // Check ownership if userId is provided
+  let purchased = false;
+  if (userId) {
+    purchased = await checkChapterOwnershipRepository(chapterId, userId);
+  }
+
+  return { ...chapter, purchased } as ChapterWithImages & { purchased?: boolean };
+}
+
+export async function getChapterBySlugWithOwnershipRepository(
+  bookId: string,
+  slug: string,
+  userId?: string
+): Promise<ChapterWithImages & { purchased?: boolean } | null> {
+  const chapter = await prisma.chapter.findFirst({
+    where: {
+      bookId,
+      slug,
+    },
+    include: {
+      images: true,
+    },
+  });
+
+  if (!chapter) {
+    return null;
+  }
+
+  // Check ownership if userId is provided
+  let purchased = false;
+  if (userId) {
+    purchased = await checkChapterOwnershipRepository(chapter.id, userId);
+  }
+
+  return { ...chapter, purchased } as ChapterWithImages & { purchased?: boolean };
+}
+
+export async function getChaptersByBookIdWithOwnershipRepository(
+  bookId: string,
+  userId?: string
+): Promise<(ChapterWithImages & { purchased?: boolean })[]> {
+  const chapters = await prisma.chapter.findMany({
+    where: { bookId },
+    orderBy: { createdAt: "asc" },
+    include: {
+      images: true,
+    },
+  });
+
+  // Check ownership for each chapter if userId is provided
+  if (userId) {
+    const chaptersWithOwnership = await Promise.all(
+      chapters.map(async (chapter) => {
+        const purchased = await checkChapterOwnershipRepository(chapter.id, userId);
+        return { ...chapter, purchased };
+      })
+    );
+    return chaptersWithOwnership as (ChapterWithImages & { purchased?: boolean })[];
+  }
+
+  return chapters as (ChapterWithImages & { purchased?: boolean })[];
+}
+
+export async function createChapterPurchaseRepository(
+  userId: string,
+  chapterId: string
+): Promise<void> {
+  console.log("[REPOSITORY] ===== Creating ChapterPurchase record =====");
+  console.log("[REPOSITORY] userId:", userId);
+  console.log("[REPOSITORY] chapterId:", chapterId);
+  
+  try {
+    console.log("[REPOSITORY] Attempting upsert operation...");
+    const purchase = await prisma.chapterPurchase.upsert({
+      where: {
+        userId_chapterId: {
+          userId,
+          chapterId,
+        },
+      },
+      update: {},
+      create: {
+        userId,
+        chapterId,
+      },
+    });
+    console.log("[REPOSITORY] ChapterPurchase upsert successful:", {
+      id: purchase.id,
+      userId: purchase.userId,
+      chapterId: purchase.chapterId,
+      createdAt: purchase.createdAt,
+    });
+  } catch (error) {
+    console.error("[REPOSITORY] ERROR: ChapterPurchase upsert failed");
+    console.error("[REPOSITORY] Error:", error);
+    console.error("[REPOSITORY] Error message:", error instanceof Error ? error.message : String(error));
+    console.error("[REPOSITORY] Error code:", (error as any).code);
+    console.error("[REPOSITORY] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    throw error;
+  }
+}

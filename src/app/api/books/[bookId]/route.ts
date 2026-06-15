@@ -3,7 +3,7 @@ import { getBookByIdHandler, updateBookHandler, deleteBookHandler } from "@/serv
 
 export async function GET(req: NextRequest, context: { params: Promise<{ bookId: string }> }) {
   const { bookId } = await context.params;
-  return getBookByIdHandler(bookId);
+  return getBookByIdHandler(bookId, req);
 }
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ bookId: string }> }) {

@@ -1,5 +1,5 @@
 import { prisma } from "@/server/prisma";
-import { applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
+import { applyComputedPricing, applyComputedPricingToChapters, normalizeChapterPricing } from "@/server/services/pricingService";
 import { replaceChapterImages } from "@/server/repositories/book/book.images";
 import { PaginationParams, PaginatedResponse } from "@/types";
 
@@ -53,7 +53,11 @@ export async function getBooksWithPagination(params: PaginationParams = {}): Pro
   };
 }
 
-export async function getBookById(bookId: string) {
+export async function getBookById(bookId: string, userId?: string) {
+  console.log("[BookService] ===== getBookById called =====");
+  console.log("[BookService] bookId:", bookId);
+  console.log("[BookService] userId:", userId);
+  
   const book = await prisma.book.findUnique({
     where: {
       id: bookId,
@@ -67,11 +71,52 @@ export async function getBookById(bookId: string) {
     },
   });
 
-  if (!book) return null;
+  if (!book) {
+    console.log("[BookService] Book not found:", bookId);
+    return null;
+  }
 
+  console.log("[BookService] Book found:", book.title);
+  console.log("[BookService] Number of chapters:", book.chapters.length);
+
+  // Apply access control to chapters using ChapterPurchase table
+  const chaptersWithAccess = await Promise.all(
+    book.chapters.map(async (chapter) => {
+      let purchased = false;
+      if (userId && chapter.price > 0) {
+        try {
+          const purchase = await prisma.chapterPurchase.findUnique({
+            where: {
+              userId_chapterId: {
+                userId,
+                chapterId: chapter.id,
+              },
+            },
+          });
+          purchased = purchase !== null;
+        } catch (error) {
+          console.error("[BookService] Error checking chapter ownership:", error);
+          purchased = false;
+        }
+      }
+
+      const chapterWithPricing = applyComputedPricing(chapter) as any;
+      chapterWithPricing.purchased = purchased;
+
+      // Apply access control: remove content for paid chapters not purchased
+      const isFree = chapter.price === 0;
+      if (!isFree && !purchased) {
+        chapterWithPricing.content = null;
+      }
+
+      return chapterWithPricing;
+    })
+  );
+
+  console.log("[BookService] ===== getBookById completed =====");
   return {
     ...book,
-    chapters: applyComputedPricingToChapters(book.chapters),
+    chapters: chaptersWithAccess,
   };
 }
 

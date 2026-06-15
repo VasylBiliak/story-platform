@@ -28,4 +28,5 @@ export interface Chapter {
   discount?: number;     // percentage (0-100)
   finalPrice?: number;   // computed
   images?: ChapterImage[]; // max 3
+  purchased?: boolean;   // whether the user has purchased this chapter
 }

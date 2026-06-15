@@ -22,6 +22,34 @@ function verifyToken(token: string): { userId: string } | null {
   }
 }
 
+export async function GET(req: NextRequest) {
+  const token = getToken(req);
+  if (!token) {
+    return unauthorizedResponse();
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    return unauthorizedResponse();
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return unauthorizedResponse();
+  }
+
+  return successResponse(user);
+}
+
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
 
