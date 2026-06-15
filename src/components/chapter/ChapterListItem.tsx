@@ -50,13 +50,13 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
               : "bg-status-warning-bg text-status-warning"
           }`}
         >
-{chapter.isFree ? (
-  <BookOpenIcon className="w-5 h-5" />
-) : chapter.purchased ? (
-  <BookOpenIcon className="w-5 h-5" />
-) : (
-  <LockIcon className="w-5 h-5" />
-)}
+        {chapter.isFree ? (
+          <BookOpenIcon className="w-5 h-5" />
+        ) : chapter.purchased ? (
+          <BookOpenIcon className="w-5 h-5" />
+        ) : (
+          <LockIcon className="w-5 h-5" />
+        )}
           
         </div>
 
