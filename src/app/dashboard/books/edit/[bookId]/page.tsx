@@ -37,7 +37,7 @@ export default function EditBookPage() {
         return;
       }
 
-      if (!currentUser.name || foundBook.author !== currentUser.name) {
+      if (foundBook.author !== (currentUser.name || currentUser.email)) {
         console.log("Access denied: Not the book author");
         router.push("/dashboard/books");
         return;

@@ -61,3 +61,10 @@ export const chapterCreateSchema = z.object({
   isFree: z.boolean().optional(),
   discount: z.number().int().min(0).max(100).optional(),
 });
+
+export const pseudonymUpdateSchema = z.object({
+  pseudonym: z.string()
+    .min(1, "Pseudonym is required")
+    .max(AUTH_LIMITS.PSEUDONYM_MAX_LENGTH, `Pseudonym cannot exceed ${AUTH_LIMITS.PSEUDONYM_MAX_LENGTH} characters`)
+    .trim(),
+});

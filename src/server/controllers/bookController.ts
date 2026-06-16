@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import { createBook, deleteBook, getBookById, getBooks } from "@/server/services/bookService";
 import { getChapters } from "@/server/services/chapterService";
 import { bookCreateSchema } from "@/server/utils/validation";
+import { sanitizePseudonym } from "@/lib/utils/sanitize";
 
 export async function listBooksHandler() {
   console.log("[BookController] listBooksHandler");
@@ -57,7 +58,7 @@ export async function createBookHandler(req: NextRequest) {
 
     const book = await createBook(user.id, {
       ...parseResult.data,
-      author: user.name || user.email,
+      author: sanitizePseudonym(user.name || user.email),
     });
 
     return successResponse(book);

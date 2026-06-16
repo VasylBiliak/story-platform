@@ -11,7 +11,7 @@ import {
 type User = {
   id: string;
   email: string;
-  name: string;
+  name?: string | null;
 };
 
 type AuthContextType = {
@@ -19,6 +19,8 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updatePseudonym: (pseudonym: string) => Promise<void>;
+  deleteAccount: (email: string, password: string) => Promise<void>;
   isLoading: boolean;
 };
 
@@ -69,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // LOGIN
   // =========================
   const login = async (email: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch("/api/user", {
       method: "POST",
       body: JSON.stringify({ email, password }),
       headers: { "Content-Type": "application/json" },
@@ -121,9 +123,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  // =========================
+  // UPDATE PSEUDONYM
+  // =========================
+  const updatePseudonym = async (pseudonym: string) => {
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch("/api/user/pseudonym", {
+      method: "PUT",
+      body: JSON.stringify({ pseudonym }),
+      headers,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || data.error || "Pseudonym update failed");
+    }
+
+    // Update user state with new pseudonym
+    setUser(data.user);
+  };
+
+  // =========================
+  // DELETE ACCOUNT
+  // =========================
+  const deleteAccount = async (email: string, password: string) => {
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch("/api/user/delete", {
+      method: "DELETE",
+      body: JSON.stringify({ email, password }),
+      headers,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || data.error || "Account deletion failed");
+    }
+
+    // Clear local storage and user state
+    localStorage.removeItem("token");
+    setUser(null);
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, login, register, logout, isLoading }}
+      value={{ user, login, register, logout, updatePseudonym, deleteAccount, isLoading }}
     >
       {children}
     </AuthContext.Provider>

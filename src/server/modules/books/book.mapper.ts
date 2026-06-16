@@ -3,6 +3,7 @@
  */
 
 import { BookCreateInput } from "@/lib/validators/book";
+import { sanitizePseudonym } from "@/lib/utils/sanitize";
 
 /**
  * Transform validated data for create operation (removes update-specific fields)
@@ -13,7 +14,7 @@ export function mapToCreatePayload(data: BookCreateInput, author: string) {
     description: data.description,
     cover: data.cover,
     price: data.price,
-    author,
+    author: sanitizePseudonym(author),
     chapters: data.chapters?.map(chapter => ({
       title: chapter.title,
       slug: chapter.slug,
