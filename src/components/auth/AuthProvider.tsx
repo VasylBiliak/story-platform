@@ -91,20 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // REGISTER
   // =========================
   const register = async (
-    name: string,
+    pseudonym: string,
     email: string,
     password: string
   ) => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name: pseudonym, email, password }),
       headers: { "Content-Type": "application/json" },
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.error || "Register failed");
+      throw new Error(data.message || data.error || "Register failed");
     }
 
     if (data.token) {

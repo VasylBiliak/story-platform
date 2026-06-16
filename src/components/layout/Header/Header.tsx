@@ -117,6 +117,7 @@ const Header = () => {
                     <button
                       onClick={() => router.push("/profile")}
                       className="flex sm:hidden w-8 h-8 rounded-full bg-accent-primary items-center justify-center text-bg-primary font-bold text-sm hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                      aria-label={`View profile for ${user.name}`}
                     >
                       {user.name.charAt(0).toUpperCase()}
                     </button>

@@ -3,6 +3,7 @@ import { loginSchema, registerSchema } from "@/server/utils/validation";
 import { loginUser, registerUser } from "@/server/services/authService";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { AUTH_COOKIE_NAME } from "@/server/middlewares/authMiddleware";
+import { AUTH_ERROR_CODES } from "@/lib/constants/auth";
 
 const cookieOptions = {
   httpOnly: true,
@@ -18,10 +19,11 @@ export async function registerHandler(req: NextRequest) {
 
     const parseResult = registerSchema.safeParse(body);
     if (!parseResult.success) {
+      console.log("[AUTH] Registration validation failed:", parseResult.error.errors);
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid input",
+          message: parseResult.error.errors[0]?.message || "Invalid input",
         },
         { status: 400 }
       );
@@ -51,16 +53,16 @@ export async function registerHandler(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("[AUTH_ERROR] REGISTER:", error);
-    console.error("[AUTH_ERROR] REGISTER_RAW:", error);
-    console.error("[AUTH_ERROR] REGISTER_STRINGIFIED:", JSON.stringify(error, null, 2));
 
-    if (error instanceof Error && error.message === "User already exists") {
+    if (error instanceof Error && (error as any).code) {
+      const errorCode = (error as any).code;
       return NextResponse.json(
         {
           success: false,
-          message: "User already exists",
+          message: error.message,
+          code: errorCode,
         },
-        { status: 409 }
+        { status: 400 }
       );
     }
 
@@ -80,10 +82,11 @@ export async function loginHandler(req: NextRequest) {
 
     const parseResult = loginSchema.safeParse(body);
     if (!parseResult.success) {
+      console.log("[AUTH] Login validation failed:", parseResult.error.errors);
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid input",
+          message: parseResult.error.errors[0]?.message || "Invalid input",
         },
         { status: 400 }
       );
@@ -113,11 +116,12 @@ export async function loginHandler(req: NextRequest) {
   } catch (error) {
     console.error("[AUTH_ERROR] LOGIN:", error);
 
-    if (error instanceof Error && error.message === "Invalid credentials") {
+    if (error instanceof Error && (error as any).code === AUTH_ERROR_CODES.INVALID_CREDENTIALS) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid email or password",
+          message: error.message,
+          code: AUTH_ERROR_CODES.INVALID_CREDENTIALS,
         },
         { status: 401 }
       );

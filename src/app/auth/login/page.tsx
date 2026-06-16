@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Input } from "@/components/ui";
+import { AUTH_LIMITS } from "@/lib/constants/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -48,18 +49,28 @@ export default function LoginPage() {
             label="Email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= AUTH_LIMITS.EMAIL_MAX_LENGTH) {
+                setEmail(e.target.value);
+              }
+            }}
             placeholder="Enter your email"
             required
+            maxLength={AUTH_LIMITS.EMAIL_MAX_LENGTH}
           />
 
           <Input
             label="Password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= AUTH_LIMITS.PASSWORD_MAX_LENGTH) {
+                setPassword(e.target.value);
+              }
+            }}
             placeholder="Enter your password"
             required
+            maxLength={AUTH_LIMITS.PASSWORD_MAX_LENGTH}
           />
 
           <Button type="submit" variant="primary" size="lg" className="w-full">

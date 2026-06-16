@@ -10,9 +10,9 @@ datasource db {
 
 model User {
   id        String     @id @default(uuid())
-  email     String     @unique
-  name      String
-  password  String     
+  email     String     @unique @db.VarChar(36)
+  name      String     @db.VarChar(36)
+  password  String     @db.VarChar(48)
   createdAt DateTime   @default(now())
 
   Book              Book[]

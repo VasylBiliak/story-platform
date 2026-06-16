@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Input } from "@/components/ui";
+import { AUTH_LIMITS } from "@/lib/constants/auth";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const [pseudonym, setPseudonym] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,13 +19,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    if (!pseudonym.trim() || !email.trim() || !password.trim()) {
       setError("Please fill in all fields");
       return;
     }
 
     try {
-      await register(name, email, password);
+      await register(pseudonym, email, password);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -46,30 +47,45 @@ export default function RegisterPage() {
           )}
 
           <Input
-            label="Name"
+            label="Pseudonym"
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
+            value={pseudonym}
+            onChange={(e) => {
+              if (e.target.value.length <= AUTH_LIMITS.PSEUDONYM_MAX_LENGTH) {
+                setPseudonym(e.target.value);
+              }
+            }}
+            placeholder="Enter your pseudonym"
             required
+            maxLength={AUTH_LIMITS.PSEUDONYM_MAX_LENGTH}
           />
 
           <Input
             label="Email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= AUTH_LIMITS.EMAIL_MAX_LENGTH) {
+                setEmail(e.target.value);
+              }
+            }}
             placeholder="Enter your email"
             required
+            maxLength={AUTH_LIMITS.EMAIL_MAX_LENGTH}
           />
 
           <Input
             label="Password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= AUTH_LIMITS.PASSWORD_MAX_LENGTH) {
+                setPassword(e.target.value);
+              }
+            }}
             placeholder="Create a password"
             required
+            maxLength={AUTH_LIMITS.PASSWORD_MAX_LENGTH}
           />
 
           <Button type="submit" variant="primary" size="lg" className="w-full">

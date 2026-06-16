@@ -118,7 +118,7 @@ export default function ProfilePage() {
               </h2>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm text-text-tertiary">Name</label>
+                  <label className="text-sm text-text-tertiary">Pseudonym</label>
                   <p className="text-text-primary font-medium">{user.name}</p>
                 </div>
                 <div>

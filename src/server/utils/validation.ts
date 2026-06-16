@@ -1,14 +1,30 @@
 import { z } from "zod";
+import { AUTH_LIMITS } from "@/lib/constants/auth";
 
 export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(1).max(100),
+  email: z.string()
+    .email("Invalid email format")
+    .max(AUTH_LIMITS.EMAIL_MAX_LENGTH, `Email cannot exceed ${AUTH_LIMITS.EMAIL_MAX_LENGTH} characters`)
+    .trim(),
+  password: z.string()
+    .min(AUTH_LIMITS.PASSWORD_MIN_LENGTH, `Password must be at least ${AUTH_LIMITS.PASSWORD_MIN_LENGTH} characters`)
+    .max(AUTH_LIMITS.PASSWORD_MAX_LENGTH, `Password cannot exceed ${AUTH_LIMITS.PASSWORD_MAX_LENGTH} characters`)
+    .trim(),
+  name: z.string()
+    .min(1, "Pseudonym is required")
+    .max(AUTH_LIMITS.PSEUDONYM_MAX_LENGTH, `Pseudonym cannot exceed ${AUTH_LIMITS.PSEUDONYM_MAX_LENGTH} characters`)
+    .trim(),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string()
+    .email("Invalid email format")
+    .max(AUTH_LIMITS.EMAIL_MAX_LENGTH, `Email cannot exceed ${AUTH_LIMITS.EMAIL_MAX_LENGTH} characters`)
+    .trim(),
+  password: z.string()
+    .min(1, "Password is required")
+    .max(AUTH_LIMITS.PASSWORD_MAX_LENGTH, `Password cannot exceed ${AUTH_LIMITS.PASSWORD_MAX_LENGTH} characters`)
+    .trim(),
 });
 
 export const bookCreateSchema = z.object({
