@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // LOGIN
   // =========================
   const login = async (email: string, password: string) => {
-    const res = await fetch("/api/user", {
+    const res = await fetch("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
       headers: { "Content-Type": "application/json" },
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.token) {
       localStorage.setItem("token", data.token);
     }
-    setUser(data.data);
+    setUser(data.user);
   };
 
   // =========================

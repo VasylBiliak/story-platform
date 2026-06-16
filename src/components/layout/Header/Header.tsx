@@ -110,16 +110,16 @@ const Header = () => {
                       className="hidden sm:flex items-center gap-2 text-text-secondary hover:text-accent-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded px-2 py-1 max-w-[140px]"
                     >
                       <span className="text-sm font-medium truncate">
-                        {user.name}
+                        {user.name || 'User'}
                       </span>
                     </button>
 
                     <button
                       onClick={() => router.push("/profile")}
                       className="flex sm:hidden w-8 h-8 rounded-full bg-accent-primary items-center justify-center text-bg-primary font-bold text-sm hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                      aria-label={`View profile for ${user.name}`}
+                      aria-label={`View profile for ${user.name || 'User'}`}
                     >
-                      {user.name.charAt(0).toUpperCase()}
+                      {(user.name?.trim()?.charAt(0)?.toUpperCase()) || '?'}
                     </button>
                   </>
                 ) : (

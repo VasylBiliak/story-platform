@@ -119,7 +119,7 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 <div>
                   <label className="text-sm text-text-tertiary">Pseudonym</label>
-                  <p className="text-text-primary font-medium">{user.name}</p>
+                  <p className="text-text-primary font-medium">{user.name || 'Not set'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-text-tertiary">Email</label>

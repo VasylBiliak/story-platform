@@ -186,7 +186,7 @@ export default function BookPageClient() {
 
           {/* Edit */}
 
-          {user && user.name === book.author && (
+          {user && user.name && user.name === book.author && (
             <Link
               href={`/dashboard/books/edit/${book.id}`}
               className="absolute top-4 right-4 md:top-8 md:right-8 
