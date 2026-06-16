@@ -12,6 +12,7 @@ type User = {
   id: string;
   email: string;
   name?: string | null;
+  plan?: "FREE" | "CREATOR" | "AUTHOR";
 };
 
 type AuthContextType = {

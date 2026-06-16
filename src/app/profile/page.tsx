@@ -11,6 +11,7 @@ import { useBooksPagination } from "@/lib/hooks/useBooksPagination";
 import { AUTH_LIMITS } from "@/lib/constants/auth";
 import { DeleteAccountVerifyModal } from "@/components/modals/DeleteAccountVerifyModal";
 import { DeleteAccountConfirmModal } from "@/components/modals/DeleteAccountConfirmModal";
+import { formatPlanName } from "@/lib/constants/plans";
 
 type ExtendedBook = Book & { isLocal?: boolean };
 
@@ -287,6 +288,30 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Current Plan Section */}
+            <div className="bg-bg-secondary border border-border rounded-xl p-6">
+              <h2 className="text-xl font-semibold text-text-primary mb-4">
+                Current Plan
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-text-tertiary">Plan</label>
+                  <p className="text-text-primary font-medium text-lg">
+                    {formatPlanName(user?.plan || "FREE")}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => router.push("/profile/plans")}
+                  className="w-full"
+                  aria-label="Change subscription plan"
+                >
+                  Change Plan
+                </Button>
+              </div>
+            </div>
+
             {/* Change Password Section */}
             <div className="bg-bg-secondary border border-border rounded-xl p-6">
               <h2 className="text-xl font-semibold text-text-primary mb-4">
@@ -402,7 +427,7 @@ export default function ProfilePage() {
       {/* Account Deletion Verification Modal */}
       <DeleteAccountVerifyModal
         isOpen={showDeleteVerifyModal}
-        userEmail={""}
+        userEmail={user?.email || ""}
         onVerify={handleVerifyCredentials}
         onCancel={handleCancelDelete}
       />
