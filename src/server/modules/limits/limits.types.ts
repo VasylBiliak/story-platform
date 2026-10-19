@@ -1,6 +1,6 @@
 // Types for the limits system
 
-export type PlanType = 'FREE' | 'PRO';
+export type PlanType = 'FREE' | 'CREATOR' | 'AUTHOR';
 
 export interface UserLimits {
   maxBooks: number;

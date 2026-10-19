@@ -444,11 +444,12 @@ export async function webhookHandler(req: NextRequest) {
           }
 
           // Check if user already has this plan (idempotency)
-          const currentUser = await prisma.$queryRaw<{ plan: string }[]>`
-            SELECT plan FROM "User" WHERE id = ${userId} LIMIT 1
-          `;
+          const currentUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { plan: true },
+          });
 
-          if (!currentUser || currentUser.length === 0) {
+          if (!currentUser) {
             console.error("[PLAN_WEBHOOK] User not found:", userId);
             return NextResponse.json(
               { success: false, message: "User not found" },
@@ -456,16 +457,18 @@ export async function webhookHandler(req: NextRequest) {
             );
           }
 
-          const currentPlan = currentUser[0].plan;
+          const currentPlan = currentUser.plan;
 
           if (currentPlan === planId) {
             console.log("[PLAN_WEBHOOK] User already has this plan, skipping update");
-            console.log("[PLAN_WEBHOOK] User plan updated (idempotent)");
           } else {
             console.log("[PLAN_WEBHOOK] Updating user plan from", currentPlan, "to", planId);
 
-            // Update user's plan in database using raw query
-            await prisma.$executeRaw`UPDATE "User" SET plan = ${planId} WHERE id = ${userId}`;
+            // Update user's plan in database using Prisma
+            await prisma.user.update({
+              where: { id: userId },
+              data: { plan: planId as any },
+            });
 
             console.log("[PLAN_WEBHOOK] User plan updated successfully");
           }

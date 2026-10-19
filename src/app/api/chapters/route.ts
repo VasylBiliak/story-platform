@@ -76,11 +76,14 @@ export async function POST(req: NextRequest) {
       return errorResponse("Slug must be unique within the book", 400);
     }
 
-    // Enforce chapter limit
+    // Enforce chapter limit based on user's plan
+    const userPlan = (user.plan as 'FREE' | 'CREATOR' | 'AUTHOR') || 'FREE';
+    const maxChapters = LimitsService.getPlan(userPlan).chapter.maxChaptersPerBook;
     const chapterCount = await LimitsService.countChaptersByBook(parseResult.data.bookId);
-    if (chapterCount >= 5) {
+    
+    if (chapterCount >= maxChapters) {
       return errorResponse(
-        "Maximum number of chapters per book is 5.",
+        `Maximum number of chapters per book for ${userPlan} plan is ${maxChapters}.`,
         400
       );
     }
@@ -88,10 +91,11 @@ export async function POST(req: NextRequest) {
     let uploadedImages: any[] = [];
 
     if (images && images.length > 0) {
-      // Enforce image limit
-      if (images.length > 3) {
+      // Enforce image limit based on user's plan
+      const maxImages = LimitsService.getPlan(userPlan).chapter.maxImagesPerChapter;
+      if (images.length > maxImages) {
         return errorResponse(
-          "Maximum number of images per chapter is 3.",
+          `Maximum number of images per chapter for ${userPlan} plan is ${maxImages}.`,
           400
         );
       }

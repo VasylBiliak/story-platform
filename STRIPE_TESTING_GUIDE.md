@@ -14,8 +14,23 @@ STRIPE_WEBHOOK_SECRET=whsec_...
    - Log into Stripe Dashboard (Test Mode)
    - Get API keys from Developers > API keys
    - Create webhook endpoint: `https://your-domain.com/api/stripe/webhook`
-   - Select event: `checkout.session.completed`
+   - Select events: `checkout.session.completed`
    - Copy webhook signing secret
+
+## Local Development with Stripe CLI
+
+For local testing, use Stripe CLI to forward webhooks to your local server:
+
+```powershell
+# From your Stripe CLI directory
+C:\Users\asus\Desktop\test\stripe.exe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+The CLI will output a webhook signing secret. Add this to your `.env` file as `STRIPE_WEBHOOK_SECRET`.
+
+**Important:** The local webhook secret from Stripe CLI is different from the production webhook secret. You must:
+- Use the CLI-generated secret for local development
+- Use the Stripe Dashboard webhook secret for production (Vercel)
 
 ## Testing Flow
 
@@ -95,13 +110,37 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 For local development, use Stripe CLI:
 
-```bash
-# Install Stripe CLI
-# Then forward webhooks to your local server
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+```powershell
+# From your Stripe CLI directory
+C:\Users\asus\Desktop\test\stripe.exe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-This will give you a webhook secret for local testing.
+This will give you a webhook secret for local testing. Add this secret to your `.env` file as `STRIPE_WEBHOOK_SECRET`.
+
+## Production Webhook Configuration (Vercel)
+
+For production deployment on Vercel:
+
+1. **Create production webhook in Stripe Dashboard:**
+   - Log into Stripe Dashboard (Live Mode or Test Mode for staging)
+   - Navigate to Developers > Webhooks
+   - Click "Add endpoint"
+   - Enter URL: `https://story-platform-black.vercel.app/api/stripe/webhook`
+   - Select events: `checkout.session.completed`
+   - Click "Add endpoint"
+
+2. **Get production webhook secret:**
+   - Click on the newly created webhook endpoint
+   - Click "Reveal" next to "Signing secret"
+   - Copy the webhook signing secret (starts with `whsec_`)
+
+3. **Add to Vercel environment variables:**
+   - Go to Vercel project settings
+   - Add `STRIPE_WEBHOOK_SECRET` with the production webhook secret
+   - Ensure `STRIPE_SECRET_KEY` is set to the appropriate mode (test or live)
+   - Redeploy the application
+
+**Important:** Never mix test and live mode credentials. Use test keys for development/staging and live keys for production.
 
 ## Security Verification
 

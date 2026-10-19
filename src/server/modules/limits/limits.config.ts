@@ -6,11 +6,20 @@ export const LIMITS: LimitsConfig = {
       maxBooks: 3,
     },
     chapter: {
-      maxChaptersPerBook: 5,
+      maxChaptersPerBook: 3,
       maxImagesPerChapter: 3,
     },
   },
-  PRO: {
+  CREATOR: {
+    user: {
+      maxBooks: 10,
+    },
+    chapter: {
+      maxChaptersPerBook: 20,
+      maxImagesPerChapter: 10,
+    },
+  },
+  AUTHOR: {
     user: {
       maxBooks: 100,
     },
