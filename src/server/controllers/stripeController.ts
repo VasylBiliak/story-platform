@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { prisma } from "@/server/prisma";
 import { checkChapterOwnershipRepository, createChapterPurchaseRepository } from "@/server/modules/chapters/chapter.repository";
+import { PLANS, getPlanById, PlanType } from "@/lib/constants/plans";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -250,6 +251,100 @@ export async function createBulkCheckoutSessionHandler(req: NextRequest) {
   }
 }
 
+export async function createPlanCheckoutSessionHandler(req: NextRequest) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { planId } = body;
+
+    if (!planId) {
+      return NextResponse.json(
+        { success: false, message: "Plan ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate plan exists and is not FREE
+    const plan = getPlanById(planId as PlanType);
+    if (!plan) {
+      return NextResponse.json(
+        { success: false, message: "Invalid plan" },
+        { status: 400 }
+      );
+    }
+
+    if (plan.priceInCents === 0) {
+      return NextResponse.json(
+        { success: false, message: "Free plan cannot be purchased" },
+        { status: 400 }
+      );
+    }
+
+    // Create Stripe Checkout Session for plan purchase
+    console.log("[PLAN_CHECKOUT] Creating session with metadata:", {
+      userId: user.id,
+      planId: plan.id,
+    });
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "cad",
+            product_data: {
+              name: `${plan.name} Plan`,
+              description: `Monthly subscription to ${plan.name} plan`,
+              metadata: {
+                planId: plan.id,
+              },
+            },
+            unit_amount: plan.priceInCents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/profile/plans?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/profile/plans?payment=cancelled`,
+      metadata: {
+        userId: user.id,
+        planId: plan.id,
+        isPlanPurchase: "true",
+      },
+    });
+
+    console.log("[PLAN_CHECKOUT] Session created successfully:", {
+      sessionId: session.id,
+      metadata: session.metadata,
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        checkoutUrl: session.url,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[STRIPE_ERROR] CREATE_PLAN_CHECKOUT_SESSION:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function webhookHandler(req: NextRequest) {
   console.log("[WEBHOOK] ===== Webhook received =====");
   console.log("[WEBHOOK] Timestamp:", new Date().toISOString());
@@ -311,14 +406,16 @@ export async function webhookHandler(req: NextRequest) {
       console.log("[WEBHOOK] Session metadata:", JSON.stringify(session.metadata, null, 2));
       console.log("[WEBHOOK] Session payment status:", session.payment_status);
       
-      const { userId, chapterId, chapterIds, isBulkPurchase } = session.metadata as {
+      const { userId, chapterId, chapterIds, isBulkPurchase, planId, isPlanPurchase } = session.metadata as {
         userId: string;
         chapterId?: string;
         chapterIds?: string;
         isBulkPurchase?: string;
+        planId?: string;
+        isPlanPurchase?: string;
       };
 
-      console.log("[WEBHOOK] Extracted metadata:", { userId, chapterId, chapterIds, isBulkPurchase });
+      console.log("[WEBHOOK] Extracted metadata:", { userId, chapterId, chapterIds, isBulkPurchase, planId, isPlanPurchase });
 
       if (!userId) {
         console.error("[WEBHOOK] ERROR: Missing userId in metadata");
@@ -329,8 +426,60 @@ export async function webhookHandler(req: NextRequest) {
         );
       }
 
+      // Handle plan purchase
+      if (isPlanPurchase === "true" && planId) {
+        console.log("[PLAN_WEBHOOK] Processing plan purchase");
+        console.log("[PLAN_WEBHOOK] User:", userId);
+        console.log("[PLAN_WEBHOOK] Plan:", planId);
+        
+        try {
+          // Validate plan exists
+          const plan = getPlanById(planId as PlanType);
+          if (!plan) {
+            console.error("[PLAN_WEBHOOK] Invalid plan ID:", planId);
+            return NextResponse.json(
+              { success: false, message: "Invalid plan" },
+              { status: 400 }
+            );
+          }
+
+          // Check if user already has this plan (idempotency)
+          const currentUser = await prisma.$queryRaw<{ plan: string }[]>`
+            SELECT plan FROM "User" WHERE id = ${userId} LIMIT 1
+          `;
+
+          if (!currentUser || currentUser.length === 0) {
+            console.error("[PLAN_WEBHOOK] User not found:", userId);
+            return NextResponse.json(
+              { success: false, message: "User not found" },
+              { status: 404 }
+            );
+          }
+
+          const currentPlan = currentUser[0].plan;
+
+          if (currentPlan === planId) {
+            console.log("[PLAN_WEBHOOK] User already has this plan, skipping update");
+            console.log("[PLAN_WEBHOOK] User plan updated (idempotent)");
+          } else {
+            console.log("[PLAN_WEBHOOK] Updating user plan from", currentPlan, "to", planId);
+
+            // Update user's plan in database using raw query
+            await prisma.$executeRaw`UPDATE "User" SET plan = ${planId} WHERE id = ${userId}`;
+
+            console.log("[PLAN_WEBHOOK] User plan updated successfully");
+          }
+        } catch (error) {
+          console.error("[PLAN_WEBHOOK] Failed to update plan");
+          console.error("[PLAN_WEBHOOK] Error:", error);
+          return NextResponse.json(
+            { success: false, message: "Failed to update user plan" },
+            { status: 500 }
+          );
+        }
+      }
       // Handle bulk purchase
-      if (isBulkPurchase === "true" && chapterIds) {
+      else if (isBulkPurchase === "true" && chapterIds) {
         console.log("[WEBHOOK] ===== Processing bulk purchase =====");
         try {
           const ids = JSON.parse(chapterIds) as string[];
@@ -401,10 +550,10 @@ export async function webhookHandler(req: NextRequest) {
         await createChapterPurchaseRepository(userId, chapterId);
         console.log("[WEBHOOK] ChapterPurchase record created successfully");
       } else {
-        console.error("[WEBHOOK] ERROR: Missing chapterId or chapterIds in metadata");
+        console.error("[WEBHOOK] ERROR: Missing chapterId, chapterIds, or planId in metadata");
         console.error("[WEBHOOK] Available metadata:", session.metadata);
         return NextResponse.json(
-          { success: false, message: "Missing chapter metadata" },
+          { success: false, message: "Missing purchase metadata" },
           { status: 400 }
         );
       }

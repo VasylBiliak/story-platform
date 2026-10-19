@@ -4,6 +4,7 @@ export interface Plan {
   id: PlanType;
   name: string;
   price: string;
+  priceInCents: number;
   features: string[];
 }
 
@@ -12,6 +13,7 @@ export const PLANS: Plan[] = [
     id: "FREE",
     name: "Free",
     price: "$0/month",
+    priceInCents: 0,
     features: [
       "Create local drafts",
       "Private writing workflow",
@@ -22,6 +24,7 @@ export const PLANS: Plan[] = [
     id: "CREATOR",
     name: "Creator",
     price: "$30/month",
+    priceInCents: 3000,
     features: [
       "Publish books",
       "Public author profile",
@@ -33,6 +36,7 @@ export const PLANS: Plan[] = [
     id: "AUTHOR",
     name: "Author",
     price: "$50/month",
+    priceInCents: 5000,
     features: [
       "Publish books",
       "Author badge",

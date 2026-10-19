@@ -15,14 +15,15 @@ export async function getCurrentUser(
   const payload = verifyToken(token);
   if (!payload) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-    },
-  });
+  const user = await prisma.$queryRaw<
+    { id: string; email: string; name: string; plan: string }[]
+  >`
+    SELECT id, email, name, plan FROM "User" WHERE id = ${payload.userId} LIMIT 1
+  `;
 
-  return user;
+  if (!user || user.length === 0) {
+    return null;
+  }
+
+  return user[0] as CurrentUser;
 }

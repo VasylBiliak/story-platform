@@ -22,6 +22,7 @@ type AuthContextType = {
   logout: () => Promise<void>;
   updatePseudonym: (pseudonym: string) => Promise<void>;
   deleteAccount: (email: string, password: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 };
 
@@ -183,9 +184,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  // =========================
+  // REFRESH USER
+  // =========================
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch("/api/auth/me", {
+        headers,
+      });
+
+      if (!res.ok) {
+        setUser(null);
+      } else {
+        const data = await res.json();
+        setUser(data.user);
+      }
+    } catch {
+      setUser(null);
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, login, register, logout, updatePseudonym, deleteAccount, isLoading }}
+      value={{ user, login, register, logout, updatePseudonym, deleteAccount, refreshUser, isLoading }}
     >
       {children}
     </AuthContext.Provider>
