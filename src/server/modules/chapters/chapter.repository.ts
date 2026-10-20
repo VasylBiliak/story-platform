@@ -159,6 +159,25 @@ export async function checkChapterOwnershipRepository(
   console.log("[ChapterRepository] userId:", userId);
   
   try {
+    // First check if user is the book owner
+    const chapter = await prisma.chapter.findUnique({
+      where: { id: chapterId },
+      select: { bookId: true },
+    });
+
+    if (chapter) {
+      const book = await prisma.book.findUnique({
+        where: { id: chapter.bookId },
+        select: { ownerId: true },
+      });
+
+      if (book && book.ownerId === userId) {
+        console.log("[ChapterRepository] User is the book owner, granting access");
+        return true;
+      }
+    }
+
+    // If not owner, check for purchase
     const purchase = await prisma.chapterPurchase.findUnique({
       where: {
         userId_chapterId: {

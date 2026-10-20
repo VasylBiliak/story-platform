@@ -91,6 +91,7 @@ export class ChapterService {
           select: {
             id: true,
             title: true,
+            ownerId: true,
           },
         },
       },
@@ -98,19 +99,25 @@ export class ChapterService {
 
     if (!chapter) return null;
 
-    // Check ownership using ChapterPurchase table
+    // Check ownership: book owner has access to all chapters
     let purchased = false;
     if (userId && chapter.price > 0) {
       try {
-        const purchase = await prisma.chapterPurchase.findUnique({
-          where: {
-            userId_chapterId: {
-              userId,
-              chapterId,
+        // First check if user is the book owner
+        if (chapter.book.ownerId === userId) {
+          purchased = true;
+        } else {
+          // If not owner, check for purchase
+          const purchase = await prisma.chapterPurchase.findUnique({
+            where: {
+              userId_chapterId: {
+                userId,
+                chapterId,
+              },
             },
-          },
-        });
-        purchased = purchase !== null;
+          });
+          purchased = purchase !== null;
+        }
       } catch (error) {
         console.error("[ChapterService] Error checking ownership:", error);
         purchased = false;
@@ -131,6 +138,11 @@ export class ChapterService {
   }
 
   static async getChaptersByBookId(bookId: string, userId?: string) {
+    const book = await prisma.book.findUnique({
+      where: { id: bookId },
+      select: { ownerId: true },
+    });
+
     const chapters = await prisma.chapter.findMany({
       where: { bookId },
       include: {
@@ -144,15 +156,21 @@ export class ChapterService {
         let purchased = false;
         if (userId && chapter.price > 0) {
           try {
-            const purchase = await prisma.chapterPurchase.findUnique({
-              where: {
-                userId_chapterId: {
-                  userId,
-                  chapterId: chapter.id,
+            // First check if user is the book owner
+            if (book && book.ownerId === userId) {
+              purchased = true;
+            } else {
+              // If not owner, check for purchase
+              const purchase = await prisma.chapterPurchase.findUnique({
+                where: {
+                  userId_chapterId: {
+                    userId,
+                    chapterId: chapter.id,
+                  },
                 },
-              },
-            });
-            purchased = purchase !== null;
+              });
+              purchased = purchase !== null;
+            }
           } catch (error) {
             console.error("[ChapterService] Error checking ownership:", error);
             purchased = false;
