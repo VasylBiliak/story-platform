@@ -13,6 +13,7 @@ import {
 import { listBooksHandler } from "@/server/modules/books/book.controller";
 import { checkBookLimit } from "@/server/modules/limits/limits.guard";
 import { deleteBookRelations } from "@/server/modules/books/book.cleanup";
+import { LimitsService } from "@/server/modules/limits/limits.service";
 import { prisma } from "@/server/prisma";
 
 export async function GET(req: NextRequest) {
@@ -61,15 +62,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Enforce chapter limit (max 5)
+    // Enforce chapter limit based on user's plan
+    const userPlan = (user.plan as 'FREE' | 'CREATOR' | 'AUTHOR') || 'FREE';
+    const maxChapters = LimitsService.getPlan(userPlan).chapter.maxChaptersPerBook;
+    const maxImages = LimitsService.getPlan(userPlan).chapter.maxImagesPerChapter;
+    
     const chapters = parseResult.data.chapters || [];
-    if (chapters.length > 5) {
-      return errorResponse("Maximum number of chapters per book is 5.", 400);
+    if (chapters.length > maxChapters) {
+      return errorResponse(
+        `Maximum number of chapters per book for ${userPlan} plan is ${maxChapters}.`,
+        400
+      );
     }
 
-    // Enforce image limit (max 3 per chapter)
-    if (chapters.some((c: any) => c.images && c.images.length > 3)) {
-      return errorResponse("Maximum number of images per chapter is 3.", 400);
+    // Enforce image limit based on user's plan
+    if (chapters.some((c: any) => c.images && c.images.length > maxImages)) {
+      return errorResponse(
+        `Maximum number of images per chapter for ${userPlan} plan is ${maxImages}.`,
+        400
+      );
     }
 
     const hasChapters = chapters.length > 0;

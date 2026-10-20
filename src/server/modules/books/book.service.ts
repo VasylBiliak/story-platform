@@ -12,6 +12,7 @@ import { createBook, updateBook, deleteBook, getBooks, getBookById, getBooksWith
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { PaginationParams } from "@/types";
 import { handleBookLimit } from "@/server/modules/limits/limits.guard";
+import { LimitsService } from "@/server/modules/limits/limits.service";
 
 /**
  * Create a new book
@@ -25,20 +26,24 @@ export async function createBookService(req: NextRequest) {
   const { body } = await parseBookRequest(req);
   const validatedData = validateBookPayload(body);
 
-  // Enforce chapter limit (max 5)
-  if (validatedData.chapters && validatedData.chapters.length > 5) {
+  // Enforce chapter limit based on user's plan
+  const userPlan = (user.plan as 'FREE' | 'CREATOR' | 'AUTHOR') || 'FREE';
+  const maxChapters = LimitsService.getPlan(userPlan).chapter.maxChaptersPerBook;
+  const maxImages = LimitsService.getPlan(userPlan).chapter.maxImagesPerChapter;
+
+  if (validatedData.chapters && validatedData.chapters.length > maxChapters) {
     return {
       error: "Chapter limit reached",
-      message: "Maximum number of chapters per book is 5.",
+      message: `Maximum number of chapters per book for ${userPlan} plan is ${maxChapters}.`,
       status: 400,
     };
   }
 
-  // Enforce image limit (max 3 per chapter)
-  if (validatedData.chapters && validatedData.chapters.some((c: any) => c.images && c.images.length > 3)) {
+  // Enforce image limit based on user's plan
+  if (validatedData.chapters && validatedData.chapters.some((c: any) => c.images && c.images.length > maxImages)) {
     return {
       error: "Image limit reached",
-      message: "Maximum number of images per chapter is 3.",
+      message: `Maximum number of images per chapter for ${userPlan} plan is ${maxImages}.`,
       status: 400,
     };
   }
@@ -80,6 +85,20 @@ export async function updateBookService(req: NextRequest, bookId: string) {
   const validatedData = validateBookPayload(body);
 
   await ensureBookOwner(bookId, user.id);
+
+  // Enforce chapter limit based on user's plan
+  const userPlan = (user.plan as 'FREE' | 'CREATOR' | 'AUTHOR') || 'FREE';
+  const maxChapters = LimitsService.getPlan(userPlan).chapter.maxChaptersPerBook;
+  const maxImages = LimitsService.getPlan(userPlan).chapter.maxImagesPerChapter;
+
+  if (validatedData.chapters && validatedData.chapters.length > maxChapters) {
+    throw new Error(`Maximum number of chapters per book for ${userPlan} plan is ${maxChapters}.`);
+  }
+
+  // Enforce image limit based on user's plan
+  if (validatedData.chapters && validatedData.chapters.some((c: any) => c.images && c.images.length > maxImages)) {
+    throw new Error(`Maximum number of images per chapter for ${userPlan} plan is ${maxImages}.`);
+  }
 
   const mappedData = mapToUpdatePayload(validatedData);
 
