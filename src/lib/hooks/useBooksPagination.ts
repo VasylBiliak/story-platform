@@ -15,6 +15,7 @@ interface UseBooksPaginationOptions {
   search?: string;
   sort?: 'newest' | 'oldest';
   genres?: string[];
+  tags?: string[];
 }
 
 interface UseBooksPaginationReturn {
@@ -31,7 +32,7 @@ interface UseBooksPaginationReturn {
 }
 
 export function useBooksPagination(options: UseBooksPaginationOptions = {}): UseBooksPaginationReturn {
-  const { initialLimit = 8, mergeWithLocal = true, ownerId, search, sort, genres } = options;
+  const { initialLimit = 8, mergeWithLocal = true, ownerId, search, sort, genres, tags } = options;
   const { localBooks, isLoaded: localLoaded } = useLocalBooks();
   
   const [remoteBooks, setRemoteBooks] = useState<Book[]>([]);
@@ -71,6 +72,10 @@ export function useBooksPagination(options: UseBooksPaginationOptions = {}): Use
         params.append("genres", genres.join(","));
       }
 
+      if (tags && tags.length > 0) {
+        params.append("tags", tags.join(","));
+      }
+
       const response = await fetch(`/api/books?${params.toString()}`, {
         headers: { "Accept": "application/json" },
       });
@@ -98,7 +103,7 @@ export function useBooksPagination(options: UseBooksPaginationOptions = {}): Use
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [initialLimit, ownerId, search, sort, genres]);
+  }, [initialLimit, ownerId, search, sort, genres, tags]);
 
   const loadMore = useCallback(async () => {
     if (!pagination || !pagination.hasMore || isLoadingMore) return;

@@ -22,4 +22,5 @@ export interface PaginationParams {
   search?: string;
   sort?: 'newest' | 'oldest';
   genres?: string[];
+  tags?: string[];
 }

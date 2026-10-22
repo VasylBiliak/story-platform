@@ -45,6 +45,17 @@ export async function findBooksWithPagination(params: PaginationParams = {}) {
     };
   }
 
+  // Add tag filter (OR logic - book matches if any of its chapters have at least one selected tag)
+  if (params.tags && params.tags.length > 0) {
+    where.chapters = {
+      some: {
+        tags: {
+          hasSome: params.tags,
+        },
+      },
+    };
+  }
+
   // Build orderBy clause
   const orderBy: any = {};
   if (params.sort === "oldest") {
@@ -280,3 +291,49 @@ export async function updateBookWithChapters(bookId: string, data: {
 export async function deleteBookById(bookId: string) {
   return prisma.book.delete({ where: { id: bookId } });
 }
+
+export async function getAvailableGenresAndTags() {
+  console.log('[Repository] Fetching available genres and tags...');
+  // Get all unique genres from books
+  const books = await prisma.book.findMany({
+    select: {
+      genres: true,
+    },
+  } as any);
+
+  console.log('[Repository] Total books:', books.length);
+
+  const allGenres = new Set<string>();
+  books.forEach((book: any) => {
+    if (book.genres && Array.isArray(book.genres)) {
+      console.log('[Repository] Book genres:', book.genres);
+      book.genres.forEach((genre: string) => allGenres.add(genre));
+    }
+  });
+
+  // Get all unique tags from chapters
+  const chapters = await prisma.chapter.findMany({
+    select: {
+      tags: true,
+    },
+  } as any);
+
+  console.log('[Repository] Total chapters:', chapters.length);
+
+  const allTags = new Set<string>();
+  chapters.forEach((chapter: any) => {
+    if (chapter.tags && Array.isArray(chapter.tags)) {
+      console.log('[Repository] Chapter tags:', chapter.tags);
+      chapter.tags.forEach((tag: string) => allTags.add(tag));
+    }
+  });
+
+  const result = {
+    genres: Array.from(allGenres).sort(),
+    tags: Array.from(allTags).sort(),
+  };
+
+  console.log('[Repository] Result:', result);
+  return result;
+}
+

@@ -1,20 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Book } from "@/lib/types";
 import { RemotwBooksGrid } from "@/components/books/RemotwBooksGrid";
 import { LocalBooksGrid } from "@/components/books/LocalBooksGrid";
 import { LoadMoreButton } from "@/components/ui/LoadMoreButton/LoadMoreButton";
-import { BooksFilters } from "@/components/books/BooksFilters";
+import { CollapsibleFilters } from "@/components/books/CollapsibleFilters";
 import { useBooksPagination } from "@/lib/hooks/useBooksPagination";
 import { MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
+import { MAX_TAGS_PER_CHAPTER } from "@/lib/constants/tags";
+
+type SortOrder = "newest" | "oldest";
 
 type ExtendedBook = Book & { isLocal?: boolean };
 
 export default function Library() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  // Fetch available genres and tags on mount
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const response = await fetch('/api/books?includeMetadata=true&limit=1');
+        const payload = await response.json();
+        console.log('[Library] Metadata response:', payload);
+        if (payload.success && payload.data?.metadata) {
+          setAvailableGenres(payload.data.metadata.genres || []);
+          setAvailableTags(payload.data.metadata.tags || []);
+          console.log('[Library] Available genres:', payload.data.metadata.genres);
+          console.log('[Library] Available tags:', payload.data.metadata.tags);
+        } else {
+          console.error('[Library] Invalid metadata response:', payload);
+        }
+      } catch (error) {
+        console.error('[Library] Failed to fetch filter metadata:', error);
+      }
+    };
+    fetchMetadata();
+  }, []);
 
   const toggleGenre = (genre: string) => {
     if (selectedGenres.includes(genre)) {
@@ -26,6 +54,18 @@ export default function Library() {
 
   const clearGenres = () => {
     setSelectedGenres([]);
+  };
+
+  const toggleTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    } else if (selectedTags.length < MAX_TAGS_PER_CHAPTER) {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const clearTags = () => {
+    setSelectedTags([]);
   };
 
   const {
@@ -41,6 +81,7 @@ export default function Library() {
     search: searchQuery,
     sort: sortOrder,
     genres: selectedGenres,
+    tags: selectedTags,
   });
 
   const mappedRemoteBooks: ExtendedBook[] = remoteBooks.map((b) => ({
@@ -52,20 +93,28 @@ export default function Library() {
     refresh();
   };
 
-  const handleSortChange = (value: "newest" | "oldest") => {
+  const handleSortChange = (value: SortOrder) => {
     setSortOrder(value);
     refresh();
   };
 
   const handleGenreToggle = (genre: string) => {
     toggleGenre(genre);
-    // Refresh after genre selection to apply filter
     setTimeout(() => refresh(), 0);
   };
 
   const handleClearGenres = () => {
     clearGenres();
-    // Refresh after clearing genres
+    setTimeout(() => refresh(), 0);
+  };
+
+  const handleTagToggle = (tag: string) => {
+    toggleTag(tag);
+    setTimeout(() => refresh(), 0);
+  };
+
+  const handleClearTags = () => {
+    clearTags();
     setTimeout(() => refresh(), 0);
   };
 
@@ -75,15 +124,20 @@ export default function Library() {
         Library
       </h1>     
       {/* Filters */}
-      <BooksFilters
+      <CollapsibleFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSearch={handleSearch}
         sortOrder={sortOrder}
         onSortChange={handleSortChange}
+        availableGenres={availableGenres}
         selectedGenres={selectedGenres}
         onGenreToggle={handleGenreToggle}
         onClearGenres={handleClearGenres}
+        availableTags={availableTags}
+        selectedTags={selectedTags}
+        onTagToggle={handleTagToggle}
+        onClearTags={handleClearTags}
         isLoading={isLoading}
       />
 

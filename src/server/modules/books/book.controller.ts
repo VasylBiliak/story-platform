@@ -27,6 +27,9 @@ export async function listBooksHandler(req: NextRequest) {
     const sort = searchParams.get("sort") as "newest" | "oldest" || undefined;
     const genresParam = searchParams.get("genres");
     const genres = genresParam ? genresParam.split(",") : undefined;
+    const tagsParam = searchParams.get("tags");
+    const tags = tagsParam ? tagsParam.split(",") : undefined;
+    const includeMetadata = searchParams.get("includeMetadata") === "true";
 
     // Validate params
     if (isNaN(page) || page < 1) {
@@ -39,7 +42,16 @@ export async function listBooksHandler(req: NextRequest) {
       return errorResponse("Invalid sort parameter (must be 'newest' or 'oldest')", 400);
     }
 
-    const params: PaginationParams = { page, limit, ownerId, search, sort, genres };
+    const params: PaginationParams = { page, limit, ownerId, search, sort, genres, tags };
+
+    if (includeMetadata) {
+      // Return books with available genres and tags metadata
+      const { getAvailableGenresAndTags } = await import("@/server/repositories/bookRepository");
+      const metadata = await getAvailableGenresAndTags();
+      const result = await listBooksPaginatedService(params);
+      return successResponse({ ...result, metadata });
+    }
+
     const result = await listBooksPaginatedService(params);
     return successResponse(result);
   } catch (error) {
