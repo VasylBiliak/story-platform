@@ -236,7 +236,8 @@ export async function updateBook(
         description: payload.description,
         cover: payload.cover,
         price: payload.price ?? 0,
-        genres: payload.genres ?? [],
+        // Leave existing genres untouched when the payload omits them
+        genres: payload.genres,
       },
     });
 

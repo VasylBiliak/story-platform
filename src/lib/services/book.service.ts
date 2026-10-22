@@ -23,6 +23,7 @@ export class BookService {
             description: data.description,
             cover: data.cover,
             price: data.price ?? 0,
+            genres: data.genres ?? [],
             author: authorName,
             ownerId: userId,
           },

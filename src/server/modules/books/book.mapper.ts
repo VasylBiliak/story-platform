@@ -14,6 +14,7 @@ export function mapToCreatePayload(data: BookCreateInput, author: string) {
     description: data.description,
     cover: data.cover,
     price: data.price,
+    genres: data.genres,
     author: sanitizePseudonym(author),
     chapters: data.chapters?.map(chapter => ({
       title: chapter.title,
@@ -39,6 +40,7 @@ export function mapToUpdatePayload(data: BookCreateInput) {
     description: data.description,
     cover: data.cover,
     price: data.price,
+    genres: data.genres,
     chapters: data.chapters,
   };
 }
