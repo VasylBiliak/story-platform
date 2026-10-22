@@ -182,18 +182,18 @@ export default function BookPageClient() {
 
       {/* Book Header */}
       <div className="rounded-2xl shadow-sm border border-border overflow-hidden mb-12">
-        <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 p-8">
+        <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 p-6 md:p-8">
 
           {/* Edit */}
 
           {user && (user.name || user.email) === book.author && (
             <Link
               href={`/dashboard/books/edit/${book.id}`}
-              className="absolute top-4 right-4 md:top-8 md:right-8 
-    inline-flex items-center justify-center p-2 
-    md:px-4 md:py-2 border 
-    border-accent-primary text-accent-primary 
-    rounded-lg hover:bg-accent-primary hover:text-white 
+              className="absolute top-4 right-4 md:top-8 md:right-8
+    inline-flex items-center justify-center p-2
+    md:px-4 md:py-2 border
+    border-accent-primary text-accent-primary
+    rounded-lg hover:bg-accent-primary hover:text-white
     transition-colors z-10 bg-bg-primary"
               title="Edit Book"
             >
@@ -204,37 +204,52 @@ export default function BookPageClient() {
             </Link>
           )}
 
-          <div className="relative aspect-[2/3] w-full max-w-xs mx-auto md:mx-0 rounded-lg overflow-hidden shadow-lg">
+          <div className="relative aspect-[2/3] w-full max-w-[200px] mx-auto md:mx-0 md:max-w-xs rounded-lg overflow-hidden shadow-lg">
             <Image
               src={book.cover}
               alt={`Cover of ${book.title}`}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, 300px"
+              sizes="(max-width: 768px) 200px, 300px"
               priority
             />
           </div>
-          <div className="md:col-span-2 flex flex-col justify-start">
-            <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4">
+          <div className="md:col-span-2 flex flex-col justify-start min-w-0">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary mb-4 break-words">
               {book.title}
             </h1>
-            <p className="text-lg text-accent-primary font-medium mb-4">
+            <p className="text-base sm:text-lg text-accent-primary font-medium mb-4">
               by {book.author}
             </p>
-            <p className="text-text-secondary leading-relaxed mb-6 text-lg">
+            <p className="text-text-secondary leading-relaxed mb-6 text-sm sm:text-base break-words">
               {book.description}
             </p>
-            <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center px-3 py-1 
-              rounded-full text-sm font-medium 
-              bg-success-bg">
+
+            {/* Genres */}
+            {book.genres && book.genres.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {book.genres.map((genre) => (
+                  <span
+                    key={genre}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-bg-secondary text-text-secondary border border-border whitespace-nowrap"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              <span className="inline-flex items-center px-3 py-1
+              rounded-full text-xs sm:text-sm font-medium
+              bg-success-bg whitespace-nowrap">
                 {freeChapters} Free Chapter{freeChapters !== 1 ? "s" : ""}
               </span>
               {paidChapters > 0 && (
-                <span className="inline-flex items-center px-3 py-1 
-                rounded-full text-sm font-medium 
-                border-2 
-          border-accent-buy tracking-[0.15em] transition-all">
+                <span className="inline-flex items-center px-3 py-1
+                rounded-full text-xs sm:text-sm font-medium
+                border-2
+          border-accent-buy tracking-[0.15em] transition-all whitespace-nowrap">
                   {paidChapters} Premium Chapter{paidChapters !== 1 ? "s" : ""}
                 </span>
               )}
@@ -244,7 +259,7 @@ export default function BookPageClient() {
             {book.images && book.images.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {book.images.map((src, i) => (
-                  <img key={i} src={src} alt={`Book image ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-border" />
+                  <img key={i} src={src} alt={`Book image ${i + 1}`} className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-border" />
                 ))}
               </div>
             )}

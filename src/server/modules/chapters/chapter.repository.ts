@@ -18,6 +18,7 @@ export async function createChapterRepository(
       slug: data.slug,
       price: data.price ?? 0,
       discount: data.discount ?? 0,
+      tags: data.tags ?? [],
       bookId,
       images: data.images && data.images.length > 0
         ? {
@@ -49,6 +50,7 @@ export async function updateChapterRepository(
       slug: data.slug,
       price: data.price,
       discount: data.discount,
+      tags: data.tags,
 
       ...(data.images !== undefined && {
         images: {

@@ -128,6 +128,7 @@ export async function createBook(
     cover: string;
     author: string;
     price?: number;
+    genres?: string[];
     chapters?: Array<{
       title: string;
       slug: string;
@@ -135,6 +136,7 @@ export async function createBook(
       isFree?: boolean;
       price?: number;
       discount?: number;
+      tags?: string[];
       images?: Array<{
         url: string;
         caption?: string;
@@ -149,6 +151,7 @@ export async function createBook(
       cover: payload.cover,
       author: payload.author,
       price: payload.price ?? 0,
+      genres: payload.genres ?? [],
       ownerId: userId,
 
       chapters: payload.chapters
@@ -162,6 +165,7 @@ export async function createBook(
               content: chapter.content,
               price: normalized.price,
               discount: normalized.discount,
+              tags: chapter.tags ?? [],
               images: chapter.images
                 ? {
                   create: chapter.images.map((img) => ({
@@ -198,6 +202,7 @@ export async function updateBook(
     description: string;
     cover: string;
     price?: number;
+    genres?: string[];
     chapters?: Array<{
       id?: string;
       title: string;
@@ -206,6 +211,7 @@ export async function updateBook(
       isFree?: boolean;
       price?: number;
       discount?: number;
+      tags?: string[];
       images?: Array<{
         url?: string;
         file?: File;
@@ -230,6 +236,7 @@ export async function updateBook(
         description: payload.description,
         cover: payload.cover,
         price: payload.price ?? 0,
+        genres: payload.genres ?? [],
       },
     });
 
@@ -271,6 +278,7 @@ export async function updateBook(
             content: chapter.content,
             price: normalized.price,
             discount: normalized.discount,
+            tags: chapter.tags ?? [],
           },
         });
 
@@ -288,6 +296,7 @@ export async function updateBook(
             content: chapter.content,
             price: normalized.price,
             discount: normalized.discount,
+            tags: chapter.tags ?? [],
             bookId: updatedBook.id,
           },
         });

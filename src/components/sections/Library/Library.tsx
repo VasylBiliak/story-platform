@@ -7,12 +7,26 @@ import { LocalBooksGrid } from "@/components/books/LocalBooksGrid";
 import { LoadMoreButton } from "@/components/ui/LoadMoreButton/LoadMoreButton";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { useBooksPagination } from "@/lib/hooks/useBooksPagination";
+import { MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
 
 type ExtendedBook = Book & { isLocal?: boolean };
 
 export default function Library() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+  const toggleGenre = (genre: string) => {
+    if (selectedGenres.includes(genre)) {
+      setSelectedGenres(selectedGenres.filter(g => g !== genre));
+    } else if (selectedGenres.length < MAX_GENRES_PER_BOOK) {
+      setSelectedGenres([...selectedGenres, genre]);
+    }
+  };
+
+  const clearGenres = () => {
+    setSelectedGenres([]);
+  };
 
   const {
     books: remoteBooks,
@@ -26,6 +40,7 @@ export default function Library() {
     mergeWithLocal: false,
     search: searchQuery,
     sort: sortOrder,
+    genres: selectedGenres,
   });
 
   const mappedRemoteBooks: ExtendedBook[] = remoteBooks.map((b) => ({
@@ -42,6 +57,18 @@ export default function Library() {
     refresh();
   };
 
+  const handleGenreToggle = (genre: string) => {
+    toggleGenre(genre);
+    // Refresh after genre selection to apply filter
+    setTimeout(() => refresh(), 0);
+  };
+
+  const handleClearGenres = () => {
+    clearGenres();
+    // Refresh after clearing genres
+    setTimeout(() => refresh(), 0);
+  };
+
   return (
     <section className="flex flex-col gap-8 px-2 sm:px-4 md:px-8 py-8" id="books">
       <h1 className="font-[Oswald] text-3xl font-bold uppercase tracking-[3px] mb-8 text-text-primary flex justify-center align-center">
@@ -54,6 +81,9 @@ export default function Library() {
         onSearch={handleSearch}
         sortOrder={sortOrder}
         onSortChange={handleSortChange}
+        selectedGenres={selectedGenres}
+        onGenreToggle={handleGenreToggle}
+        onClearGenres={handleClearGenres}
         isLoading={isLoading}
       />
 

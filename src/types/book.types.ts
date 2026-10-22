@@ -14,6 +14,7 @@ export interface Book {
   description: string;
   cover: string; // base64 (required)
   author: string;
+  genres?: string[]; // max 5
   images?: string[]; // max 3
 }
 
@@ -27,6 +28,7 @@ export interface Chapter {
   price?: number;        // base price in USD
   discount?: number;     // percentage (0-100)
   finalPrice?: number;   // computed
+  tags?: string[];       // max 5
   images?: ChapterImage[]; // max 3
   purchased?: boolean;   // whether the user has purchased this chapter
 }

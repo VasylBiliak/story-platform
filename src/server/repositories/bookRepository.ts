@@ -15,7 +15,7 @@ export async function findBooksWithPagination(params: PaginationParams = {}) {
 
   // Build where clause
   const where: any = {};
-  
+
   if (params.ownerId) {
     where.ownerId = params.ownerId;
   }
@@ -36,6 +36,13 @@ export async function findBooksWithPagination(params: PaginationParams = {}) {
         },
       },
     ];
+  }
+
+  // Add genre filter (OR logic - book matches if it has at least one selected genre)
+  if (params.genres && params.genres.length > 0) {
+    where.genres = {
+      hasSome: params.genres,
+    };
   }
 
   // Build orderBy clause

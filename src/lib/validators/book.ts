@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
+import { MAX_TAGS_PER_CHAPTER } from "@/lib/constants/tags";
 
 const chapterImageSchema = z.object({
   id: z.string().optional(),
@@ -41,6 +43,8 @@ const chapterSchema = z.object({
     .max(100, "Discount must be between 0 and 100")
     .optional(),
 
+  tags: z.array(z.string()).max(MAX_TAGS_PER_CHAPTER, `Maximum ${MAX_TAGS_PER_CHAPTER} tags allowed`).optional(),
+
   images: z.array(chapterImageSchema).optional(),
 });
 
@@ -61,6 +65,8 @@ export const bookCreateSchema = z.object({
     .number()
     .min(0, "Price must be non-negative")
     .optional(),
+
+  genres: z.array(z.string()).max(MAX_GENRES_PER_BOOK, `Maximum ${MAX_GENRES_PER_BOOK} genres allowed`).optional(),
 
   chapters: z.array(chapterSchema).optional(),
 });

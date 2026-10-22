@@ -13,6 +13,7 @@ export interface CreateChapterDto {
   slug: string;
   price?: number;
   discount?: number;
+  tags?: string[];
   images?: ChapterImageDto[];
 }
 
@@ -22,6 +23,7 @@ export interface UpdateChapterDto {
   slug?: string;
   price?: number;
   discount?: number;
+  tags?: string[];
   images?: ChapterImageDto[];
 }
 
@@ -43,5 +45,4 @@ export interface ChapterImage {
   url: string | null;
   caption: string | null;
   chapterId: string;
-  createdAt: Date;
 }

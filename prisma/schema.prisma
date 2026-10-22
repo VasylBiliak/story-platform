@@ -34,6 +34,7 @@ model Book {
   description String
   cover       String
   price       Float      @default(0)
+  genres      String[]   @default([])
   createdAt   DateTime   @default(now())
   ownerId     String?
   User        User?      @relation(fields: [ownerId], references: [id])
@@ -51,6 +52,7 @@ model Chapter {
   createdAt   DateTime @default(now())
   price       Float    @default(0)
   discount    Float?   @default(0)
+  tags        String[] @default([])
   bookId      String
   book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   images      ChapterImage[]

@@ -21,4 +21,5 @@ export interface PaginationParams {
   ownerId?: string;
   search?: string;
   sort?: 'newest' | 'oldest';
+  genres?: string[];
 }

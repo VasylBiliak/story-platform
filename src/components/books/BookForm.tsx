@@ -11,6 +11,8 @@ import { getChapterImage } from "@/lib/utils/imageHelpers";
 import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
 import { mapFormToLocalBook, updateLocalBookFromForm } from "@/lib/local-books/localBookMapper";
 import { BookReplacementModal } from "@/components/modals/BookReplacementModal";
+import { BOOK_GENRES, MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
+import { CHAPTER_TAGS, MAX_TAGS_PER_CHAPTER } from "@/lib/constants/tags";
 
 
 export type BookFormMode = "create" | "edit";
@@ -40,6 +42,7 @@ type ChapterInput = {
   isFree: boolean;
   price?: number;
   discount?: number;
+  tags: string[];
   images: ChapterImage[];
   discountError?: string;
 };
@@ -49,6 +52,7 @@ type FormState = {
     title: string;
     description: string;
     cover: string;
+    genres: string[];
   };
   chapters: ChapterInput[];
 };
@@ -60,6 +64,7 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
         title: book.title ?? '',
         description: book.description ?? '',
         cover: book.cover ?? '',
+        genres: book.genres ?? [],
       },
       chapters: chapters.map((c) => ({
         title: c.title ?? '',
@@ -67,6 +72,7 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
         isFree: c.isFree,
         price: c.price,
         discount: c.discount,
+        tags: c.tags ?? [],
         images: c.images || [],
       })),
     };
@@ -76,8 +82,9 @@ function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
       title: "",
       description: "",
       cover: "",
+      genres: [],
     },
-    chapters: [{ title: "", content: "", isFree: true, images: [] }],
+    chapters: [{ title: "", content: "", isFree: true, tags: [], images: [] }],
   };
 }
 
@@ -127,26 +134,44 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     return {};
   }
 
-  const updateBook = (field: keyof FormState["book"], value: string) => {
-    const sanitized = sanitizeText(value);
-    setForm((prev) => ({
-      ...prev,
-      book: { ...prev.book, [field]: sanitized },
-    }));
+  const updateBook = (field: keyof FormState["book"], value: string | string[]) => {
+    if (field === "genres") {
+      setForm((prev) => ({
+        ...prev,
+        book: { ...prev.book, genres: value as string[] },
+      }));
+    } else {
+      const sanitized = sanitizeText(value as string);
+      setForm((prev) => ({
+        ...prev,
+        book: { ...prev.book, [field]: sanitized },
+      }));
+    }
+  };
+
+  const toggleGenre = (genre: string) => {
+    const currentGenres = form.book.genres;
+    if (currentGenres.includes(genre)) {
+      updateBook("genres", currentGenres.filter(g => g !== genre));
+    } else if (currentGenres.length < MAX_GENRES_PER_BOOK) {
+      updateBook("genres", [...currentGenres, genre]);
+    }
   };
 
   const updateChapter = (
     index: number,
     field: keyof ChapterInput,
-    value: string | boolean | number
+    value: string | boolean | number | string[]
   ) => {
-    let safeValue: string | boolean | number | undefined;
+    let safeValue: string | boolean | number | string[] | undefined;
     if (typeof value === "string") {
       if (field === "price" || field === "discount") {
         safeValue = value === "" ? undefined : parseFloat(value);
       } else {
         safeValue = sanitizeText(value);
       }
+    } else if (Array.isArray(value)) {
+      safeValue = value;
     } else {
       safeValue = value;
     }
@@ -181,12 +206,21 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     });
   };
 
+  const toggleTag = (chapterIndex: number, tag: string) => {
+    const currentTags = form.chapters[chapterIndex].tags;
+    if (currentTags.includes(tag)) {
+      updateChapter(chapterIndex, "tags", currentTags.filter(t => t !== tag));
+    } else if (currentTags.length < MAX_TAGS_PER_CHAPTER) {
+      updateChapter(chapterIndex, "tags", [...currentTags, tag]);
+    }
+  };
+
   const addChapter = () => {
     if (form.chapters.length >= 5) return;
     setLastAddedIndex(form.chapters.length);
     setForm((prev) => ({
       ...prev,
-      chapters: [...prev.chapters, { title: "", content: "", isFree: false, images: [] }],
+      chapters: [...prev.chapters, { title: "", content: "", isFree: false, tags: [], images: [] }],
     }));
   };
 
@@ -364,6 +398,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
       description: (form.book.description ?? '').trim(),
       cover: (form.book.cover ?? '').trim(),
       author: user?.name || "Anonymous",
+      genres: form.book.genres,
       chapters: form.chapters.map((c, i) => ({
         ...(c.id && { id: c.id }), // CRITICAL: Send chapter.id for existing chapters only
         title: (c.title ?? '').trim(),
@@ -372,6 +407,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         isFree: c.isFree,
         price: c.isFree ? 0 : (c.price ?? 0),
         discount: c.isFree ? 0 : (c.discount ?? 0),
+        tags: c.tags,
         images: c.images.map((img) => ({
           ...(img.id && { id: img.id }), // CRITICAL: Send image.id for existing images only
           url: img.url,
@@ -548,6 +584,34 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         />
 
         <div>
+          <label className="block text-sm text-text-secondary mb-2">
+            Genres <span className="text-text-tertiary">(up to {MAX_GENRES_PER_BOOK})</span>
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {BOOK_GENRES.map((genre) => (
+              <button
+                key={genre}
+                type="button"
+                onClick={() => toggleGenre(genre)}
+                disabled={!form.book.genres.includes(genre) && form.book.genres.length >= MAX_GENRES_PER_BOOK}
+                className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                  form.book.genres.includes(genre)
+                    ? "bg-accent-primary text-white border-accent-primary"
+                    : "bg-bg-primary text-text-secondary border-border hover:border-accent-primary"
+                } ${!form.book.genres.includes(genre) && form.book.genres.length >= MAX_GENRES_PER_BOOK ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+          {form.book.genres.length >= MAX_GENRES_PER_BOOK && (
+            <p className="text-xs text-amber-600">
+              Maximum number of genres reached ({MAX_GENRES_PER_BOOK}).
+            </p>
+          )}
+        </div>
+
+        <div>
           <label className="block text-sm text-text-secondary mb-1">
             Cover Image <span className="text-text-tertiary">(1 required, 2MB max)</span>
           </label>
@@ -691,6 +755,34 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                     />
                     + Upload images (max 3, 2MB each)
                   </label>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm text-text-secondary mb-2">
+                  Tags <span className="text-text-tertiary">(up to {MAX_TAGS_PER_CHAPTER})</span>
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {CHAPTER_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(index, tag)}
+                      disabled={!chapter.tags.includes(tag) && chapter.tags.length >= MAX_TAGS_PER_CHAPTER}
+                      className={`px-2 py-1 text-xs rounded-full border transition ${
+                        chapter.tags.includes(tag)
+                          ? "bg-accent-primary text-white border-accent-primary"
+                          : "bg-bg-primary text-text-secondary border-border hover:border-accent-primary"
+                      } ${!chapter.tags.includes(tag) && chapter.tags.length >= MAX_TAGS_PER_CHAPTER ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                {chapter.tags.length >= MAX_TAGS_PER_CHAPTER && (
+                  <p className="text-xs text-amber-600">
+                    Maximum number of tags reached ({MAX_TAGS_PER_CHAPTER}).
+                  </p>
                 )}
               </div>
 

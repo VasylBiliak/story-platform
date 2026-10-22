@@ -25,6 +25,8 @@ export async function listBooksHandler(req: NextRequest) {
     const ownerId = searchParams.get("ownerId") || undefined;
     const search = searchParams.get("search") || undefined;
     const sort = searchParams.get("sort") as "newest" | "oldest" || undefined;
+    const genresParam = searchParams.get("genres");
+    const genres = genresParam ? genresParam.split(",") : undefined;
 
     // Validate params
     if (isNaN(page) || page < 1) {
@@ -37,7 +39,7 @@ export async function listBooksHandler(req: NextRequest) {
       return errorResponse("Invalid sort parameter (must be 'newest' or 'oldest')", 400);
     }
 
-    const params: PaginationParams = { page, limit, ownerId, search, sort };
+    const params: PaginationParams = { page, limit, ownerId, search, sort, genres };
     const result = await listBooksPaginatedService(params);
     return successResponse(result);
   } catch (error) {

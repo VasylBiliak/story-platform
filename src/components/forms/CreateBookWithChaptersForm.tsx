@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Book, Chapter, ChapterImage } from "@/types";
 import { DEFAULT_IMG } from "@/data/books";
 import { getChapterImage } from "@/lib/utils/imageHelpers";
+import { BOOK_GENRES, MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
+import { CHAPTER_TAGS, MAX_TAGS_PER_CHAPTER } from "@/lib/constants/tags";
 
 interface Props {
   onCreate: (book: Book, chapters: Chapter[]) => void;
@@ -23,6 +25,7 @@ type ChapterInput = {
   title: string;
   content: string;
   isFree: boolean;
+  tags: string[];
   images: ChapterImage[];
 };
 
@@ -32,6 +35,7 @@ type FormState = {
     description: string;
     cover: string;
     author: string;
+    genres: string[];
     images: string[];
   };
   chapters: ChapterInput[];
@@ -43,9 +47,10 @@ const INITIAL_STATE: FormState = {
     description: "",
     cover: "",
     author: "",
+    genres: [],
     images: [],
   },
-  chapters: [{ title: "", content: "", isFree: true, images: [] }],
+  chapters: [{ title: "", content: "", isFree: true, tags: [], images: [] }],
 };
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -68,17 +73,33 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
   const lastInputRef = useRef<HTMLInputElement | null>(null);
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
 
-  const updateBook = (field: keyof FormState["book"], value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      book: { ...prev.book, [field]: value },
-    }));
+  const updateBook = (field: keyof FormState["book"], value: string | string[]) => {
+    if (field === "genres") {
+      setForm((prev) => ({
+        ...prev,
+        book: { ...prev.book, genres: value as string[] },
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        book: { ...prev.book, [field]: value as string },
+      }));
+    }
+  };
+
+  const toggleGenre = (genre: string) => {
+    const currentGenres = form.book.genres;
+    if (currentGenres.includes(genre)) {
+      updateBook("genres", currentGenres.filter(g => g !== genre));
+    } else if (currentGenres.length < MAX_GENRES_PER_BOOK) {
+      updateBook("genres", [...currentGenres, genre]);
+    }
   };
 
   const updateChapter = (
     index: number,
     field: keyof ChapterInput,
-    value: string | boolean
+    value: string | boolean | string[]
   ) => {
     setForm((prev) => {
       const next = [...prev.chapters];
@@ -87,12 +108,21 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
     });
   };
 
+  const toggleTag = (chapterIndex: number, tag: string) => {
+    const currentTags = form.chapters[chapterIndex].tags;
+    if (currentTags.includes(tag)) {
+      updateChapter(chapterIndex, "tags", currentTags.filter(t => t !== tag));
+    } else if (currentTags.length < MAX_TAGS_PER_CHAPTER) {
+      updateChapter(chapterIndex, "tags", [...currentTags, tag]);
+    }
+  };
+
   const addChapter = () => {
     if (form.chapters.length >= 5) return;
     setLastAddedIndex(form.chapters.length);
     setForm((prev) => ({
       ...prev,
-      chapters: [...prev.chapters, { title: "", content: "", isFree: false, images: [] }],
+      chapters: [...prev.chapters, { title: "", content: "", isFree: false, tags: [], images: [] }],
     }));
   };
 
@@ -192,6 +222,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
       description: form.book.description.trim(),
       cover: form.book.cover.trim(),
       author: form.book.author.trim(),
+      genres: form.book.genres,
     };
 
     const newChapters: Chapter[] = form.chapters.map((c, i) => ({
@@ -201,6 +232,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
       slug: slugify(c.title) || `chapter-${i + 1}`,
       content: c.content.trim(),
       isFree: i === 0 ? true : c.isFree,
+      tags: c.tags,
       images: c.images.length > 0
         ? c.images.map(img => ({ ...img, caption: img.caption?.trim() || "" }))
         : undefined,
@@ -255,6 +287,34 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-[80px]"
             placeholder="Book description"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm text-text-secondary mb-2">
+            Genres <span className="text-text-tertiary">(up to {MAX_GENRES_PER_BOOK})</span>
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {BOOK_GENRES.map((genre) => (
+              <button
+                key={genre}
+                type="button"
+                onClick={() => toggleGenre(genre)}
+                disabled={!form.book.genres.includes(genre) && form.book.genres.length >= MAX_GENRES_PER_BOOK}
+                className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                  form.book.genres.includes(genre)
+                    ? "bg-accent-primary text-white border-accent-primary"
+                    : "bg-bg-primary text-text-secondary border-border hover:border-accent-primary"
+                } ${!form.book.genres.includes(genre) && form.book.genres.length >= MAX_GENRES_PER_BOOK ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+          {form.book.genres.length >= MAX_GENRES_PER_BOOK && (
+            <p className="text-xs text-amber-600">
+              Maximum number of genres reached ({MAX_GENRES_PER_BOOK}).
+            </p>
+          )}
         </div>
 
         <div>
@@ -400,6 +460,34 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
                     />
                     + Upload images (max 3, 2MB each)
                   </label>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm text-text-secondary mb-2">
+                  Tags <span className="text-text-tertiary">(up to {MAX_TAGS_PER_CHAPTER})</span>
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {CHAPTER_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(index, tag)}
+                      disabled={!chapter.tags.includes(tag) && chapter.tags.length >= MAX_TAGS_PER_CHAPTER}
+                      className={`px-2 py-1 text-xs rounded-full border transition ${
+                        chapter.tags.includes(tag)
+                          ? "bg-accent-primary text-white border-accent-primary"
+                          : "bg-bg-primary text-text-secondary border-border hover:border-accent-primary"
+                      } ${!chapter.tags.includes(tag) && chapter.tags.length >= MAX_TAGS_PER_CHAPTER ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                {chapter.tags.length >= MAX_TAGS_PER_CHAPTER && (
+                  <p className="text-xs text-amber-600">
+                    Maximum number of tags reached ({MAX_TAGS_PER_CHAPTER}).
+                  </p>
                 )}
               </div>
 

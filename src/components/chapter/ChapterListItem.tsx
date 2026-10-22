@@ -20,7 +20,7 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
 
   const content = (
     <>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         {/* Reserved checkbox column - always rendered to maintain alignment */}
         <div className="w-5 h-5 flex-shrink-0">
           {showCheckbox ? (
@@ -34,7 +34,7 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
             />
           ) : null}
         </div>
-        
+
         <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border border-border">
           <img
             src={imageUrl}
@@ -57,32 +57,48 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
         ) : (
           <LockIcon className="w-5 h-5" />
         )}
-          
+
         </div>
 
-        <div>
-          <h3 className="font-medium group-hover:text-accent-primary transition-colors">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium group-hover:text-accent-primary transition-colors truncate">
             {chapter.title}
           </h3>
 
-          {chapter.purchased ? (
-            <PurchasedBadge />
-          ) : (
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                chapter.isFree
-                  ? "bg-status-success-bg text-status-success"
-                  : "bg-status-warning-bg text-status-warning"
-              }`}
-            >
-              {chapter.isFree ? "FREE" : "LOCKED"}
-            </span>
+          {/* Tags - publicly visible */}
+          {chapter.tags && chapter.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {chapter.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-bg-secondary text-text-tertiary border border-border whitespace-nowrap"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
           )}
+
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {chapter.purchased ? (
+              <PurchasedBadge />
+            ) : (
+              <span
+                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  chapter.isFree
+                    ? "bg-status-success-bg text-status-success"
+                    : "bg-status-warning-bg text-status-warning"
+                }`}
+              >
+                {chapter.isFree ? "FREE" : "LOCKED"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       {!chapter.isFree && !chapter.purchased && chapter.finalPrice !== undefined && (
-        <div className="text-right">
+        <div className="text-right flex-shrink-0 ml-3">
           <div className="text-sm font-semibold text-accent-primary">
             ${chapter.finalPrice.toFixed(2)}
           </div>
@@ -101,8 +117,8 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
 
   if (showCheckbox) {
     return (
-      <div className="group flex items-center justify-between p-4 rounded-lg border border-border
-      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm cursor-pointer"
+      <div className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border border-border
+      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm cursor-pointer gap-2"
       onClick={() => onToggle?.(chapter.id)}
       >
         {content}
@@ -113,8 +129,8 @@ export function ChapterListItem({ chapter, bookSlug, isSelected = false, onToggl
   return (
     <Link
       href={`/book/${bookSlug}/chapter/${chapter.slug}`}
-      className="group flex items-center justify-between p-4 rounded-lg border border-border
-      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm"
+      className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border border-border
+      transition-all duration-200 hover:border-accent-primary-hover hover:shadow-sm gap-2"
     >
       {content}
     </Link>
