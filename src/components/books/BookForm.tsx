@@ -594,6 +594,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
             onClear={() => updateBook("genres", [])}
             maxSelections={MAX_GENRES_PER_BOOK}
             searchable
+            closeOnMouseLeave
           />
           <SelectedValues values={form.book.genres} />
         </div>
@@ -755,6 +756,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
                   onClear={() => updateChapter(index, "tags", [])}
                   maxSelections={MAX_TAGS_PER_CHAPTER}
                   searchable
+                  closeOnMouseLeave
                 />
                 <SelectedValues values={chapter.tags} />
               </div>

@@ -12,6 +12,8 @@ interface FilterDropdownProps {
   disabled?: boolean;
   /** Replace the header with a search input while the list is open */
   searchable?: boolean;
+  /** Close when the cursor leaves both the header and the open list */
+  closeOnMouseLeave?: boolean;
 }
 
 export function FilterDropdown({
@@ -23,6 +25,7 @@ export function FilterDropdown({
   maxSelections = 3,
   disabled = false,
   searchable = false,
+  closeOnMouseLeave = false,
 }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -80,7 +83,11 @@ export function FilterDropdown({
   );
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div
+      className="relative"
+      ref={dropdownRef}
+      onMouseLeave={closeOnMouseLeave && isOpen ? closeDropdown : undefined}
+    >
       {searchable && isOpen ? (
         <div className={headerClassName}>
           <input
@@ -131,60 +138,63 @@ export function FilterDropdown({
       )}
 
       {isOpen && (
-        <div className="absolute z-50 w-full sm:w-64 mt-2 bg-bg-primary border border-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-          <div className="p-2">
-            {selected.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClear();
-                  closeDropdown();
-                }}
-                className="w-full text-xs text-accent-primary hover:text-accent-primary-hover py-1.5 px-2 rounded transition-colors"
-              >
-                Clear all
-              </button>
-            )}
-            {options.length === 0 ? (
-              <p className="text-sm text-text-tertiary py-2 px-2">No options available</p>
-            ) : visibleOptions.length === 0 ? (
-              <p className="text-sm text-text-tertiary py-2 px-2">No matching {label.toLowerCase()} found</p>
-            ) : (
-              visibleOptions.map((option) => {
-                const isSelected = selected.includes(option);
-                const canSelect = !isSelected && canAddMore;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      if (canSelect || isSelected) {
-                        onToggle(option);
-                      }
-                    }}
-                    disabled={!canSelect && !isSelected}
-                    className={`w-full text-left px-3 py-2 rounded-md transition-colors text-sm ${
-                      isSelected
-                        ? "bg-accent-primary text-white"
-                        : "text-text-secondary hover:bg-bg-secondary"
-                    } ${!canSelect && !isSelected ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                        isSelected ? "bg-white border-white" : "border-border"
-                      }`}>
-                        {isSelected && (
-                          <svg className="w-3 h-3 text-accent-primary" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
+        // Padding instead of margin so the gap below the header still counts as inside the dropdown
+        <div className="absolute z-50 w-full sm:w-64 pt-2">
+          <div className="bg-bg-primary border border-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+            <div className="p-2">
+              {selected.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClear();
+                    closeDropdown();
+                  }}
+                  className="w-full text-xs text-accent-primary hover:text-accent-primary-hover py-1.5 px-2 rounded transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+              {options.length === 0 ? (
+                <p className="text-sm text-text-tertiary py-2 px-2">No options available</p>
+              ) : visibleOptions.length === 0 ? (
+                <p className="text-sm text-text-tertiary py-2 px-2">No matching {label.toLowerCase()} found</p>
+              ) : (
+                visibleOptions.map((option) => {
+                  const isSelected = selected.includes(option);
+                  const canSelect = !isSelected && canAddMore;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        if (canSelect || isSelected) {
+                          onToggle(option);
+                        }
+                      }}
+                      disabled={!canSelect && !isSelected}
+                      className={`w-full text-left px-3 py-2 rounded-md transition-colors text-sm ${
+                        isSelected
+                          ? "bg-accent-primary text-white"
+                          : "text-text-secondary hover:bg-bg-secondary"
+                      } ${!canSelect && !isSelected ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          isSelected ? "bg-white border-white" : "border-border"
+                        }`}>
+                          {isSelected && (
+                            <svg className="w-3 h-3 text-accent-primary" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="truncate">{option}</span>
                       </div>
-                      <span className="truncate">{option}</span>
-                    </div>
-                  </button>
-                );
-              })
-            )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
