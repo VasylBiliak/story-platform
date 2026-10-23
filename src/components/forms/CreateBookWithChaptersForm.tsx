@@ -7,6 +7,8 @@ import { DEFAULT_IMG } from "@/data/books";
 import { getChapterImage } from "@/lib/utils/imageHelpers";
 import { BOOK_GENRES, MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
 import { CHAPTER_TAGS, MAX_TAGS_PER_CHAPTER } from "@/lib/constants/tags";
+import { FilterDropdown } from "@/components/books/FilterDropdown";
+import { SelectedValues } from "@/components/books/SelectedValues";
 
 interface Props {
   onCreate: (book: Book, chapters: Chapter[]) => void;
@@ -293,23 +295,16 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
           <label className="block text-sm text-text-secondary mb-2">
             Genres <span className="text-text-tertiary">(up to {MAX_GENRES_PER_BOOK})</span>
           </label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {BOOK_GENRES.map((genre) => (
-              <button
-                key={genre}
-                type="button"
-                onClick={() => toggleGenre(genre)}
-                disabled={!form.book.genres.includes(genre) && form.book.genres.length >= MAX_GENRES_PER_BOOK}
-                className={`px-3 py-1.5 text-sm rounded-full border transition ${
-                  form.book.genres.includes(genre)
-                    ? "bg-accent-primary text-white border-accent-primary"
-                    : "bg-bg-primary text-text-secondary border-border hover:border-accent-primary"
-                } ${!form.book.genres.includes(genre) && form.book.genres.length >= MAX_GENRES_PER_BOOK ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
+          <FilterDropdown
+            label="Genres"
+            options={BOOK_GENRES}
+            selected={form.book.genres}
+            onToggle={toggleGenre}
+            onClear={() => updateBook("genres", [])}
+            maxSelections={MAX_GENRES_PER_BOOK}
+            searchable
+          />
+          <SelectedValues values={form.book.genres} />
           {form.book.genres.length >= MAX_GENRES_PER_BOOK && (
             <p className="text-xs text-amber-600">
               Maximum number of genres reached ({MAX_GENRES_PER_BOOK}).
@@ -362,9 +357,10 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
               layout
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
+              // Clip only while collapsing, so the tag dropdown menu isn't cut off
+              exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0, overflow: "hidden" }}
               transition={{ duration: 0.2 }}
-              className="p-4 border border-border rounded-lg space-y-3 overflow-hidden"
+              className="p-4 border border-border rounded-lg space-y-3"
             >
               <div className="flex items-center justify-between">
                 <h4 className="text-text-primary font-semibold">
@@ -465,25 +461,18 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
 
               <div>
                 <label className="block text-sm text-text-secondary mb-2">
-                  Tags <span className="text-text-tertiary">(up to {MAX_TAGS_PER_CHAPTER})</span>
+                  Chapter {index + 1} tags <span className="text-text-tertiary">(up to {MAX_TAGS_PER_CHAPTER})</span>
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {CHAPTER_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(index, tag)}
-                      disabled={!chapter.tags.includes(tag) && chapter.tags.length >= MAX_TAGS_PER_CHAPTER}
-                      className={`px-2 py-1 text-xs rounded-full border transition ${
-                        chapter.tags.includes(tag)
-                          ? "bg-accent-primary text-white border-accent-primary"
-                          : "bg-bg-primary text-text-secondary border-border hover:border-accent-primary"
-                      } ${!chapter.tags.includes(tag) && chapter.tags.length >= MAX_TAGS_PER_CHAPTER ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
+                <FilterDropdown
+                  label="Tags"
+                  options={CHAPTER_TAGS}
+                  selected={chapter.tags}
+                  onToggle={(tag) => toggleTag(index, tag)}
+                  onClear={() => updateChapter(index, "tags", [])}
+                  maxSelections={MAX_TAGS_PER_CHAPTER}
+                  searchable
+                />
+                <SelectedValues values={chapter.tags} />
                 {chapter.tags.length >= MAX_TAGS_PER_CHAPTER && (
                   <p className="text-xs text-amber-600">
                     Maximum number of tags reached ({MAX_TAGS_PER_CHAPTER}).

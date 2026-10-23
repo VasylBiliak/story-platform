@@ -4,12 +4,14 @@ import React, { useState, useRef, useEffect } from "react";
 
 interface FilterDropdownProps {
   label: string;
-  options: string[];
+  options: readonly string[];
   selected: string[];
   onToggle: (value: string) => void;
   onClear: () => void;
   maxSelections?: number;
   disabled?: boolean;
+  /** Replace the header with a search input while the list is open */
+  searchable?: boolean;
 }
 
 export function FilterDropdown({
@@ -20,14 +22,23 @@ export function FilterDropdown({
   onClear,
   maxSelections = 3,
   disabled = false,
+  searchable = false,
 }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // The search query only lives while the list is open; selections are untouched
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setQuery("");
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setQuery("");
       }
     };
 
@@ -42,35 +53,82 @@ export function FilterDropdown({
 
   const canAddMore = selected.length < maxSelections;
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleOptions = normalizedQuery
+    ? options.filter((option) => option.toLowerCase().includes(normalizedQuery))
+    : options;
+
+  const headerClassName = `flex items-center justify-between w-full sm:w-64 px-4 py-2.5 bg-bg-primary border border-border rounded-lg text-left transition-colors ${
+    isOpen ? "border-accent-primary" : "hover:border-accent-primary-hover"
+  } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`;
+
+  const selectedCount = selected.length > 0 && (
+    <span className={`text-xs font-medium ${selected.length >= maxSelections ? 'text-amber-600' : 'text-accent-primary'}`}>
+      ({selected.length}/{maxSelections})
+    </span>
+  );
+
+  const chevron = (
+    <svg
+      className={`w-4 h-4 text-text-tertiary transition-transform ${isOpen ? "rotate-180" : ""}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        className={`flex items-center justify-between w-full sm:w-64 px-4 py-2.5 bg-bg-primary border border-border rounded-lg text-left transition-colors ${
-          isOpen ? "border-accent-primary" : "hover:border-accent-primary-hover"
-        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-sm font-medium text-text-secondary truncate">
-            {label}
-          </span>
-          {selected.length > 0 && (
-            <span className="text-xs text-accent-primary font-medium">
-              ({selected.length})
-            </span>
-          )}
+      {searchable && isOpen ? (
+        <div className={headerClassName}>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              // Keep Enter from submitting the surrounding form
+              if (e.key === "Enter") e.preventDefault();
+              if (e.key === "Escape") closeDropdown();
+            }}
+            placeholder={`Search ${label.toLowerCase()}`}
+            aria-label={`Search ${label.toLowerCase()}`}
+            autoFocus
+            className="flex-1 min-w-0 bg-transparent text-sm text-text-primary placeholder-text-tertiary outline-none"
+          />
+          <div className="flex items-center gap-2 ml-2">
+            {selectedCount}
+            <button
+              type="button"
+              onClick={closeDropdown}
+              aria-label={`Close ${label.toLowerCase()} list`}
+            >
+              {chevron}
+            </button>
+          </div>
         </div>
-        <svg
-          className={`w-4 h-4 text-text-tertiary transition-transform ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            if (disabled) return;
+            if (isOpen) closeDropdown();
+            else setIsOpen(true);
+          }}
+          disabled={disabled}
+          aria-expanded={isOpen}
+          className={headerClassName}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-sm font-medium text-text-secondary truncate">
+              {label}
+            </span>
+            {selectedCount}
+          </div>
+          {chevron}
+        </button>
+      )}
 
       {isOpen && (
         <div className="absolute z-50 w-full sm:w-64 mt-2 bg-bg-primary border border-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
@@ -80,7 +138,7 @@ export function FilterDropdown({
                 type="button"
                 onClick={() => {
                   onClear();
-                  setIsOpen(false);
+                  closeDropdown();
                 }}
                 className="w-full text-xs text-accent-primary hover:text-accent-primary-hover py-1.5 px-2 rounded transition-colors"
               >
@@ -89,8 +147,10 @@ export function FilterDropdown({
             )}
             {options.length === 0 ? (
               <p className="text-sm text-text-tertiary py-2 px-2">No options available</p>
+            ) : visibleOptions.length === 0 ? (
+              <p className="text-sm text-text-tertiary py-2 px-2">No matching {label.toLowerCase()} found</p>
             ) : (
-              options.map((option) => {
+              visibleOptions.map((option) => {
                 const isSelected = selected.includes(option);
                 const canSelect = !isSelected && canAddMore;
                 return (

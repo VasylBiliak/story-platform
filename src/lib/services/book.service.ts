@@ -48,6 +48,7 @@ export class BookService {
               slug: chapter.slug,
               price: chapter.price ?? 0,
               discount: chapter.discount ?? 0,
+              tags: chapter.tags ?? [],
               bookId: createdBook.id,
             },
           });
