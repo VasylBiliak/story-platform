@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Book, Chapter, ChapterImage } from "@/types";
-import { sanitizeText, INPUT_LIMITS, validateImage } from "@/lib/sanitize";
+import { Book, Chapter } from "@/types";
+import { INPUT_LIMITS } from "@/lib/sanitize";
 import { Button, Input, Textarea, FileInput, ConfirmModal } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getChapterImage } from "@/lib/utils/imageHelpers";
 import { useLocalBooks } from "@/lib/local-books/hooks/useLocalBooks";
 import { mapFormToLocalBook, updateLocalBookFromForm } from "@/lib/local-books/localBookMapper";
 import { BookReplacementModal } from "@/components/modals/BookReplacementModal";
 import { BOOK_GENRES, MAX_GENRES_PER_BOOK } from "@/lib/constants/genres";
-import { CHAPTER_TAGS, MAX_TAGS_PER_CHAPTER } from "@/lib/constants/tags";
+import { useBookForm, MAX_CHAPTERS_PER_FORM } from "@/lib/hooks/useBookForm";
+import { buildBookPayload, appendChapterImageFiles } from "@/lib/utils/bookFormPayload";
 import { FilterDropdown } from "@/components/books/FilterDropdown";
 import { SelectedValues } from "@/components/books/SelectedValues";
+import { ChapterEditor } from "@/components/books/ChapterEditor";
 
 
 export type BookFormMode = "create" | "edit";
@@ -28,92 +29,26 @@ export interface BookFormProps {
   onSubmit?: () => void;
 }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-");
-}
-
-type ChapterInput = {
-  id?: string; // Add optional id for existing chapters
-  title: string;
-  content: string;
-  isFree: boolean;
-  price?: number;
-  discount?: number;
-  tags: string[];
-  images: ChapterImage[];
-  discountError?: string;
-};
-
-type FormState = {
-  book: {
-    title: string;
-    description: string;
-    cover: string;
-    genres: string[];
-  };
-  chapters: ChapterInput[];
-};
-
-function createInitialState(book?: Book, chapters?: Chapter[]): FormState {
-  if (book && chapters) {
-    return {
-      book: {
-        title: book.title ?? '',
-        description: book.description ?? '',
-        cover: book.cover ?? '',
-        genres: book.genres ?? [],
-      },
-      chapters: chapters.map((c) => ({
-        title: c.title ?? '',
-        content: c.content ?? '',
-        isFree: c.isFree,
-        price: c.price,
-        discount: c.discount,
-        tags: c.tags ?? [],
-        images: c.images || [],
-      })),
-    };
-  }
-  return {
-    book: {
-      title: "",
-      description: "",
-      cover: "",
-      genres: [],
-    },
-    chapters: [{ title: "", content: "", isFree: true, tags: [], images: [] }],
-  };
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const validation = validateImage(file);
-    if (!validation.valid) {
-      reject(new Error(validation.error));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-
 export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { createLocalBook, updateLocalBook: updateLocalBookState, removeLocalBook, isLocalBook } = useLocalBooks();
-  const [form, setForm] = useState<FormState>(() =>
-    createInitialState(initialData?.book, initialData?.chapters)
-  );
-  const lastInputRef = useRef<HTMLInputElement | null>(null);
-  const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
+  const {
+    form,
+    isValid,
+    resetForm,
+    updateBook,
+    setCover,
+    toggleGenre,
+    updateChapter,
+    toggleTag,
+    addChapter,
+    removeChapter,
+    addChapterImages,
+    removeChapterImage,
+    updateChapterImageCaption,
+    chapterTitleRef,
+  } = useBookForm(initialData?.book, initialData?.chapters);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [createLocally, setCreateLocally] = useState(false);
@@ -121,6 +56,9 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
   const [replacementBooks, setReplacementBooks] = useState<any[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+
+  const endpoint = mode === "create" ? "/api/books" : `/api/books/${encodeURIComponent(initialData?.book.id ?? "")}`;
+  const method = mode === "create" ? "POST" : "PUT";
 
   // Check if editing a local book
   useEffect(() => {
@@ -136,178 +74,13 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     return {};
   }
 
-  const updateBook = (field: keyof FormState["book"], value: string | string[]) => {
-    if (field === "genres") {
-      setForm((prev) => ({
-        ...prev,
-        book: { ...prev.book, genres: value as string[] },
-      }));
-    } else {
-      const sanitized = sanitizeText(value as string);
-      setForm((prev) => ({
-        ...prev,
-        book: { ...prev.book, [field]: sanitized },
-      }));
+  const finishSave = (bookSlug?: string) => {
+    onSubmit?.();
+    if (mode === "create") {
+      resetForm();
     }
+    router.push(bookSlug ? `/book/${bookSlug}` : "/dashboard/books");
   };
-
-  const toggleGenre = (genre: string) => {
-    const currentGenres = form.book.genres;
-    if (currentGenres.includes(genre)) {
-      updateBook("genres", currentGenres.filter(g => g !== genre));
-    } else if (currentGenres.length < MAX_GENRES_PER_BOOK) {
-      updateBook("genres", [...currentGenres, genre]);
-    }
-  };
-
-  const updateChapter = (
-    index: number,
-    field: keyof ChapterInput,
-    value: string | boolean | number | string[]
-  ) => {
-    let safeValue: string | boolean | number | string[] | undefined;
-    if (typeof value === "string") {
-      if (field === "price" || field === "discount") {
-        safeValue = value === "" ? undefined : parseFloat(value);
-      } else {
-        safeValue = sanitizeText(value);
-      }
-    } else if (Array.isArray(value)) {
-      safeValue = value;
-    } else {
-      safeValue = value;
-    }
-    setForm((prev) => {
-      const next = [...prev.chapters];
-      next[index] = { ...next[index], [field]: safeValue };
-
-      // Reactive free chapter logic: if price is 0, set isFree to true
-      if (field === "price" && typeof safeValue === "number") {
-        if (safeValue === 0) {
-          next[index].isFree = true;
-        } else if (safeValue > 0 && next[index].isFree) {
-          next[index].isFree = false;
-        }
-      }
-
-      // Validate discount: must be between 0 and 100
-      if (field === "discount" && typeof safeValue === "number") {
-        if (safeValue < 0 || safeValue > 100) {
-          next[index].discountError = "Discount must be between 0 and 100";
-        } else {
-          next[index].discountError = undefined;
-        }
-      }
-
-      // Free chapters cannot have discount > 0
-      if (next[index].isFree && next[index].discount && next[index].discount > 0) {
-        next[index].discount = 0;
-      }
-
-      return { ...prev, chapters: next };
-    });
-  };
-
-  const toggleTag = (chapterIndex: number, tag: string) => {
-    const currentTags = form.chapters[chapterIndex].tags;
-    if (currentTags.includes(tag)) {
-      updateChapter(chapterIndex, "tags", currentTags.filter(t => t !== tag));
-    } else if (currentTags.length < MAX_TAGS_PER_CHAPTER) {
-      updateChapter(chapterIndex, "tags", [...currentTags, tag]);
-    }
-  };
-
-  const addChapter = () => {
-    if (form.chapters.length >= 5) return;
-    setLastAddedIndex(form.chapters.length);
-    setForm((prev) => ({
-      ...prev,
-      chapters: [...prev.chapters, { title: "", content: "", isFree: false, tags: [], images: [] }],
-    }));
-  };
-
-  useEffect(() => {
-    if (lastAddedIndex !== null && lastInputRef.current) {
-      lastInputRef.current.focus();
-      setLastAddedIndex(null);
-    }
-  }, [lastAddedIndex]);
-
-  const removeChapter = (index: number) => {
-    if (form.chapters.length <= 1) return;
-    setForm((prev) => ({
-      ...prev,
-      chapters: prev.chapters.filter((_, i) => i !== index),
-    }));
-  };
-
-  const removeBookCover = () => {
-    setForm((prev) => ({
-      ...prev,
-      book: { ...prev.book, cover: "" },
-    }));
-  };
-
-  const handleChapterImages = async (chapterIndex: number, files: FileList | null) => {
-    if (!files) return;
-    const chapter = form.chapters[chapterIndex];
-    const remainingSlots = 3 - chapter.images.length;
-    if (remainingSlots <= 0) return;
-    const toProcess = Array.from(files).slice(0, remainingSlots);
-    try {
-      const base64s = await Promise.all(toProcess.map(fileToBase64));
-      const newImages: ChapterImage[] = base64s.map((url) => ({ id: crypto.randomUUID(), url, caption: "" }));
-      setForm((prev) => {
-        const next = [...prev.chapters];
-        next[chapterIndex] = { ...next[chapterIndex], images: [...next[chapterIndex].images, ...newImages] };
-        return { ...prev, chapters: next };
-      });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to process image");
-    }
-  };
-
-  const removeChapterImage = (chapterIndex: number, imageIndex: number) => {
-    setForm((prev) => {
-      const next = [...prev.chapters];
-      next[chapterIndex] = {
-        ...next[chapterIndex],
-        images: next[chapterIndex].images.filter((_, i) => i !== imageIndex),
-      };
-      return { ...prev, chapters: next };
-    });
-  };
-
-  const updateChapterImageCaption = (chapterIndex: number, imageIndex: number, caption: string) => {
-    const sanitized = sanitizeText(caption);
-    setForm((prev) => {
-      const next = [...prev.chapters];
-      const updatedImages = [...next[chapterIndex].images];
-      updatedImages[imageIndex] = { ...updatedImages[imageIndex], caption: sanitized };
-      next[chapterIndex] = { ...next[chapterIndex], images: updatedImages };
-      return { ...prev, chapters: next };
-    });
-  };
-
-  const isValid =
-    form.book.title.trim().length > 0 &&
-    form.book.title.trim().length <= INPUT_LIMITS.bookTitle &&
-    form.book.description.trim().length <= INPUT_LIMITS.description &&
-    (form.book.cover ?? '').trim().length > 0 &&
-    form.chapters.length >= 1 &&
-    form.chapters.every(
-      (c) =>
-        (c.title ?? '').trim().length > 0 &&
-        (c.title ?? '').trim().length <= INPUT_LIMITS.chapterTitle &&
-        (c.content ?? '').trim().length > 0 &&
-        (c.content ?? '').trim().length <= INPUT_LIMITS.chapterContent &&
-        (c.isFree || (c.price !== undefined && c.price >= 0)) &&
-        (c.discount === undefined || (Number.isInteger(c.discount) && c.discount >= 0 && c.discount <= 100)) &&
-        !c.discountError &&
-        c.images.every(
-          (img) => (img.caption?.trim().length ?? 0) <= INPUT_LIMITS.caption
-        )
-    );
 
   const handleDelete = async () => {
     if (!initialData) return;
@@ -349,8 +122,6 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     pendingFormData.append("replaceBookId", selectedBookId);
 
     try {
-      const endpoint = mode === "create" ? "/api/books" : `/api/books/${encodeURIComponent(initialData?.book.id ?? "")}`;
-      const method = mode === "create" ? "POST" : "PUT";
       const response = await fetch(endpoint, {
         method,
         headers: await getAuthHeaders(),
@@ -364,17 +135,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         return;
       }
 
-      onSubmit?.();
-      const bookSlug = payload.createdBook?.id || payload.data?.id;
-      if (mode === "create") {
-        setForm(createInitialState());
-      }
-
-      if (bookSlug) {
-        router.push(`/book/${bookSlug}`);
-      } else {
-        router.push("/dashboard/books");
-      }
+      finishSave(payload.createdBook?.id || payload.data?.id);
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Save request failed");
     } finally {
@@ -395,28 +156,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     if (!isValid) return;
     setApiError(null);
 
-    const bookPayload = {
-      title: (form.book.title ?? '').trim(),
-      description: (form.book.description ?? '').trim(),
-      cover: (form.book.cover ?? '').trim(),
-      author: user?.name || "Anonymous",
-      genres: form.book.genres,
-      chapters: form.chapters.map((c, i) => ({
-        ...(c.id && { id: c.id }), // CRITICAL: Send chapter.id for existing chapters only
-        title: (c.title ?? '').trim(),
-        slug: slugify(c.title ?? '') || `chapter-${i + 1}`,
-        content: (c.content ?? '').trim(),
-        isFree: c.isFree,
-        price: c.isFree ? 0 : (c.price ?? 0),
-        discount: c.isFree ? 0 : (c.discount ?? 0),
-        tags: c.tags,
-        images: c.images.map((img) => ({
-          ...(img.id && { id: img.id }), // CRITICAL: Send image.id for existing images only
-          url: img.url,
-          caption: (img.caption ?? '').trim() || "",
-        })),
-      })),
-    };
+    const bookPayload = buildBookPayload(form, user?.name || "Anonymous");
 
     // Handle local book creation/update
     if (createLocally) {
@@ -432,13 +172,13 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
             bookPayload.chapters
           );
           createLocalBook(book, chapters);
-          setForm(createInitialState());
+          resetForm();
           router.push(`/book/${book.id}`);
         } else if (mode === "edit" && initialData?.book) {
-          const existingBook = isLocalBook(initialData.book.id) 
+          const existingBook = isLocalBook(initialData.book.id)
             ? initialData.book as any
             : null;
-          
+
           if (existingBook) {
             const { book, chapters } = updateLocalBookFromForm(
               existingBook,
@@ -465,27 +205,9 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
     // Handle backend API call
     const formData = new FormData();
     formData.append("book", JSON.stringify(bookPayload));
-
-    form.chapters.forEach((chapter, chapterIndex) => {
-      chapter.images.forEach((image, imageIndex) => {
-        if (image.url.startsWith("data:")) {
-          const base64Data = image.url.split(",")[1];
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers as unknown as ArrayLike<number>);
-          const blob = new Blob([byteArray], { type: "image/jpeg" });
-          const file = new File([blob], `chapter-${chapterIndex}-image-${imageIndex}.jpg`, { type: "image/jpeg" });
-          formData.append(`chapterImages_${chapterIndex}_${imageIndex}`, file);
-        }
-      });
-    });
+    appendChapterImageFiles(formData, form.chapters);
 
     try {
-      const endpoint = mode === "create" ? "/api/books" : `/api/books/${encodeURIComponent(initialData?.book.id ?? "")}`;
-      const method = mode === "create" ? "POST" : "PUT";
       const response = await fetch(endpoint, {
         method,
         headers: await getAuthHeaders(),
@@ -507,16 +229,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         if (payload?.replacedBook) {
           setApiError(`${payload.message} Book ID: ${payload.replacedBook.id.substring(0, 8)}...`);
         }
-        onSubmit?.();
-        const bookSlug = payload.createdBook?.id;
-        if (mode === "create") {
-          setForm(createInitialState());
-        }
-        if (bookSlug) {
-          router.push(`/book/${bookSlug}`);
-        } else {
-          router.push("/dashboard/books");
-        }
+        finishSave(payload.createdBook?.id);
         return;
       }
 
@@ -526,18 +239,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
         return;
       }
 
-      onSubmit?.();
-
-      const bookSlug = payload.data?.id;
-      if (mode === "create") {
-        setForm(createInitialState());
-      }
-
-      if (bookSlug) {
-        router.push(`/book/${bookSlug}`);
-      } else {
-        router.push("/dashboard/books");
-      }
+      finishSave(payload.data?.id);
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Save request failed");
     }
@@ -612,7 +314,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
               />
               <button
                 type="button"
-                onClick={removeBookCover}
+                onClick={() => setCover("")}
                 className="absolute top-1 right-1 w-6 h-6 bg-bg-primary/90 text-text-secondary hover:text-accent-primary rounded-full flex items-center justify-center text-sm transition"
                 title="Remove cover"
               >
@@ -621,7 +323,7 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
             </div>
           ) : (
             <FileInput
-              onFileSelect={(base64) => setForm((prev) => ({ ...prev, book: { ...prev.book, cover: base64 } }))}
+              onFileSelect={setCover}
               placeholder="+ Upload cover image (PNG, JPEG, WebP)"
             />
           )}
@@ -644,239 +346,39 @@ export function BookForm({ mode, initialData, onSubmit }: BookFormProps) {
               transition={{ duration: 0.2 }}
               className="p-4 border border-border rounded-lg space-y-3"
             >
-              <div className="flex items-center justify-between">
-                <h4 className="text-text-primary font-semibold">
-                  Chapter {index + 1}
-                </h4>
-                {form.chapters.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeChapter(index)}
-                    className="flex items-center gap-1 text-xs text-text-tertiary hover:text-accent-primary transition"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    <span className="hidden md:inline ml-2">Remove</span>
-                  </button>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor={`chapter-title-${index}`}
-                  className="block text-sm text-text-secondary mb-1"
-                >
-                  Title *
-                </label>
-                <input
-                  id={`chapter-title-${index}`}
-                  type="text"
-                  ref={lastAddedIndex === index ? lastInputRef : undefined}
-                  value={chapter.title}
-                  onChange={(e) =>
-                    updateChapter(index, "title", e.target.value)
-                  }
-                  maxLength={INPUT_LIMITS.chapterTitle}
-                  className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
-                  placeholder="Chapter title"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor={`chapter-content-${index}`}
-                  className="block text-sm text-text-secondary mb-1"
-                >
-                  Content *
-                </label>
-                <textarea
-                  id={`chapter-content-${index}`}
-                  value={chapter.content}
-                  onChange={(e) =>
-                    updateChapter(index, "content", e.target.value)
-                  }
-                  maxLength={INPUT_LIMITS.chapterContent}
-                  className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition min-h-25"
-                  placeholder="Chapter content"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">
-                  Chapter Images <span className="text-text-tertiary"></span>
-                </label>
-                {chapter.images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3 mb-3">
-                    {chapter.images.map((img, i) => (
-                      <div key={i} className="space-y-2">
-                        <div className="relative group">
-                          <img src={getChapterImage(img.url)} alt={`Preview ${i + 1}`} className="w-full h-16 object-cover rounded-md border border-border" />
-                          <button
-                            type="button"
-                            onClick={() => removeChapterImage(index, i)}
-                            className="absolute top-1 right-1 w-5 h-5 bg-bg-primary/80 text-text-secondary hover:text-accent-primary rounded-full flex items-center justify-center text-xs transition"
-                            title="Remove image"
-                          >
-                            ×
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          value={img.caption ?? ""}
-                          onChange={(e) => updateChapterImageCaption(index, i, e.target.value)}
-                          maxLength={INPUT_LIMITS.caption}
-                          placeholder="Enter caption..."
-                          className="w-full px-2 py-1 text-xs bg-bg-primary border border-border rounded text-text-primary outline-none focus:border-accent-primary transition"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {chapter.images.length < 3 && (
-                  <label className="block w-full px-3 py-2 border border-dashed border-border rounded-md text-text-secondary hover:border-accent-primary hover:text-text-primary transition cursor-pointer text-center text-sm">
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => handleChapterImages(index, e.target.files)}
-                    />
-                    + Upload images (max 3, 2MB each)
-                  </label>
-                )}
-              </div>
-
-              <div>
-                <FilterDropdown
-                  label="Tags"
-                  options={CHAPTER_TAGS}
-                  selected={chapter.tags}
-                  onToggle={(tag) => toggleTag(index, tag)}
-                  onClear={() => updateChapter(index, "tags", [])}
-                  maxSelections={MAX_TAGS_PER_CHAPTER}
-                  searchable
-                  closeOnMouseLeave
-                />
-                <SelectedValues values={chapter.tags} />
-              </div>
-
-              {index !== 0 && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={chapter.isFree}
-                    onChange={(e) => {
-                      updateChapter(index, "isFree", e.target.checked);
-                      // When setting isFree, also update price accordingly
-                      if (e.target.checked) {
-                        updateChapter(index, "price", 0);
-                      }
-                    }}
-                    className="w-4 h-4 accent-accent-primary"
-                  />
-                  <span className="text-sm text-text-secondary">
-                    Free chapter
-                  </span>
-                  {chapter.isFree && (
-                    <span className="text-xs text-accent-primary ml-2">(Price set to 0)</span>
-                  )}
-                </label>
-              )}
-
-              {!chapter.isFree && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1">
-                      Price (USD) *
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={chapter.price ?? ""}
-                      onChange={(e) =>
-                        updateChapter(index, "price", e.target.value)
-                      }
-                      className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary outline-none focus:border-accent-primary transition"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1">
-                      Discount (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={chapter.discount ?? ""}
-                      onChange={(e) =>
-                        updateChapter(index, "discount", e.target.value)
-                      }
-                      disabled={chapter.isFree}
-                      className={`w-full px-3 py-2 bg-bg-primary border rounded-md text-text-primary outline-none focus:border-accent-primary transition ${chapter.discountError ? 'border-red-500' : 'border-border'
-                        } ${chapter.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      placeholder="0"
-                    />
-                    {chapter.discountError && (
-                      <p className="text-xs text-red-500 mt-1">{chapter.discountError}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {chapter.price !== undefined && chapter.price !== 0 && (
-                <div className="p-3 bg-bg-secondary rounded-lg border border-border">
-                  <p className="text-sm text-text-secondary">
-                    Base Price:{" "}
-                    <span className="font-semibold text-accent-primary">
-                      ${chapter.price.toFixed(2)}
-                    </span>
-                    {chapter.discount && chapter.discount > 0 && (
-                      <>
-                        {" "}
-                        <span className="ml-2 text-text-tertiary">
-                          -{chapter.discount}% discount
-                        </span>
-                      </>
-                    )}
-                    <span className="text-xs text-text-tertiary ml-2">
-                      (Final price calculated by backend)
-                    </span>
-                  </p>
-                </div>
-              )}
+              <ChapterEditor
+                chapter={chapter}
+                index={index}
+                canRemove={form.chapters.length > 1}
+                titleRef={chapterTitleRef(index)}
+                onChange={(field, value) => updateChapter(index, field, value)}
+                onRemove={() => removeChapter(index)}
+                onToggleTag={(tag) => toggleTag(index, tag)}
+                onAddImages={(files) => addChapterImages(index, files)}
+                onRemoveImage={(imageIndex) => removeChapterImage(index, imageIndex)}
+                onImageCaptionChange={(imageIndex, caption) => updateChapterImageCaption(index, imageIndex, caption)}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
 
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={addChapter}
-          disabled={form.chapters.length >= 5}
-          className="w-full"
-        >
-          + Add Chapter
-        </Button>
-        {form.chapters.length >= 5 && (
-          <p className="text-xs text-amber-600 text-center">
-            Maximum number of chapters reached (5). You have reached the demo limit.
-          </p>
-        )}
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={addChapter}
+        disabled={form.chapters.length >= MAX_CHAPTERS_PER_FORM }
+        className="w-full"
+      >
+        {form.chapters.length >= MAX_CHAPTERS_PER_FORM 
+          ? "Maximum number of chapters reached (" + MAX_CHAPTERS_PER_FORM + "). You have reached the demo limit." 
+          : "+ Add Chapter"}
+      </Button>
+
       </div>
 
       {apiError && (
         <div className="p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
           {apiError}
-        </div>
-      )}
-
-      {form.chapters.length >= 5 && (
-        <div className="p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-600 text-xs">
-          Maximum number of chapters reached ({form.chapters.length}).
         </div>
       )}
 

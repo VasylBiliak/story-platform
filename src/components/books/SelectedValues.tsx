@@ -1,15 +1,16 @@
 interface SelectedValuesProps {
   values: string[];
+  className?: string;
 }
 
 /**
- * Read-only badges showing what is selected in a closed FilterDropdown
+ * Read-only badges for a list of values, e.g. a book's genres or the selection in a closed FilterDropdown
  */
-export function SelectedValues({ values }: SelectedValuesProps) {
+export function SelectedValues({ values, className = "mt-2" }: SelectedValuesProps) {
   if (values.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className={`flex flex-wrap gap-2 ${className}`}>
       {values.map((value) => (
         <span
           key={value}

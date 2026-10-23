@@ -474,12 +474,7 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
                   searchable
                   closeOnMouseLeave
                 />
-                <SelectedValues values={chapter.tags} />
-                {chapter.tags.length >= MAX_TAGS_PER_CHAPTER && (
-                  <p className="text-xs text-amber-600">
-                    Maximum number of tags reached ({MAX_TAGS_PER_CHAPTER}).
-                  </p>
-                )}
+                <SelectedValues values={chapter.tags} />               
               </div>
 
               {index !== 0 && (
@@ -510,11 +505,6 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
           >
             + Add Chapter
           </button>
-          {form.chapters.length >= 5 && (
-            <p className="text-xs text-amber-600 text-center">
-              Maximum number of chapters reached (5).
-            </p>
-          )}
         </div>
       </div>
 

@@ -9,6 +9,8 @@ import { getBookBySlug as getStaticBookBySlug } from "@/lib/api/books";
 import { getChaptersByBookSorted as getStaticChaptersByBook } from "@/lib/api/chapters";
 import { ChapterListItem } from "@/components/chapter/ChapterListItem";
 import { BulkPurchaseSummary } from "@/components/chapter/BulkPurchaseSummary";
+import { SelectAllChaptersControl } from "@/components/chapter/SelectAllChaptersControl";
+import { SelectedValues } from "@/components/books/SelectedValues";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getLocalBookById, getLocalChaptersByBookId } from "@/lib/local-books/localBookStorage";
 import { LocalBook, LocalChapter } from "@/lib/local-books/localBook.types";
@@ -226,18 +228,7 @@ export default function BookPageClient() {
             </p>
 
             {/* Genres */}
-            {book.genres && book.genres.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {book.genres.map((genre) => (
-                  <span
-                    key={genre}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-bg-secondary text-text-secondary border border-border whitespace-nowrap"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-            )}
+            <SelectedValues values={book.genres ?? []} className="mb-6" />
 
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <span className="inline-flex items-center px-3 py-1
@@ -290,21 +281,12 @@ export default function BookPageClient() {
 
         {/* Select All Control (Top) */}
         {eligibleChapters.length > 0 && (
-          <div className="mb-4 flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedChapterIds.size === eligibleChapters.length}
-                onChange={handleSelectAllToggle}
-                className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
-                aria-label="Select all purchasable chapters"
-              />
-              <span className="text-sm font-medium text-text-primary">Select All</span>
-            </label>
-            <span className="text-xs text-text-tertiary">
-              ({eligibleChapters.length} premium chapters available)
-            </span>
-          </div>
+          <SelectAllChaptersControl
+            selectedCount={selectedChapterIds.size}
+            eligibleCount={eligibleChapters.length}
+            onToggle={handleSelectAllToggle}
+            className="mb-4"
+          />
         )}
 
         {chapters.length > 0 ? (
@@ -328,21 +310,12 @@ export default function BookPageClient() {
 
         {/* Select All Control (Bottom) - Only show if >10 chapters */}
         {showBottomSelectAll && eligibleChapters.length > 0 && (
-          <div className="mt-4 flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedChapterIds.size === eligibleChapters.length}
-                onChange={handleSelectAllToggle}
-                className="w-5 h-5 rounded border-border text-accent-primary focus:ring-accent-primary cursor-pointer"
-                aria-label="Select all purchasable chapters"
-              />
-              <span className="text-sm font-medium text-text-primary">Select All</span>
-            </label>
-            <span className="text-xs text-text-tertiary">
-              ({eligibleChapters.length} premium chapters available)
-            </span>
-          </div>
+          <SelectAllChaptersControl
+            selectedCount={selectedChapterIds.size}
+            eligibleCount={eligibleChapters.length}
+            onToggle={handleSelectAllToggle}
+            className="mt-4"
+          />
         )}
       </section>
     </div>
