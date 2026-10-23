@@ -107,8 +107,6 @@ export function ChapterEditor({
           onToggle={onToggleTag}
           onClear={() => onChange("tags", [])}
           maxSelections={MAX_TAGS_PER_CHAPTER}
-          searchable
-          closeOnMouseLeave
         />
         <SelectedValues values={chapter.tags} />
       </div>

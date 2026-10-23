@@ -10,12 +10,13 @@ interface FilterDropdownProps {
   onClear: () => void;
   maxSelections?: number;
   disabled?: boolean;
-  /** Replace the header with a search input while the list is open */
-  searchable?: boolean;
-  /** Close when the cursor leaves both the header and the open list */
-  closeOnMouseLeave?: boolean;
 }
 
+/**
+ * Checkbox multi-select used by the book forms and the library filters.
+ * While open, the header becomes a search input; the list closes when the
+ * cursor leaves the header and list together, on outside click, or on Escape.
+ */
 export function FilterDropdown({
   label,
   options,
@@ -24,8 +25,6 @@ export function FilterDropdown({
   onClear,
   maxSelections = 3,
   disabled = false,
-  searchable = false,
-  closeOnMouseLeave = false,
 }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -86,9 +85,9 @@ export function FilterDropdown({
     <div
       className="relative"
       ref={dropdownRef}
-      onMouseLeave={closeOnMouseLeave && isOpen ? closeDropdown : undefined}
+      onMouseLeave={isOpen ? closeDropdown : undefined}
     >
-      {searchable && isOpen ? (
+      {isOpen ? (
         <div className={headerClassName}>
           <input
             type="text"

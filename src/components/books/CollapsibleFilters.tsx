@@ -92,7 +92,7 @@ export function CollapsibleFilters({
           {/* Genre and Tag Dropdowns */}
           <div className="flex flex-col sm:flex-row gap-4">
             <FilterDropdown
-              label="Genre"
+              label="Genres"
               options={availableGenres}
               selected={selectedGenres}
               onToggle={onGenreToggle}

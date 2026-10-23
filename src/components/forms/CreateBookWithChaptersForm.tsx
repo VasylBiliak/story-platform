@@ -302,8 +302,6 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
             onToggle={toggleGenre}
             onClear={() => updateBook("genres", [])}
             maxSelections={MAX_GENRES_PER_BOOK}
-            searchable
-            closeOnMouseLeave
           />
           <SelectedValues values={form.book.genres} />
           {form.book.genres.length >= MAX_GENRES_PER_BOOK && (
@@ -471,8 +469,6 @@ export function CreateBookWithChaptersForm({ onCreate }: Props) {
                   onToggle={(tag) => toggleTag(index, tag)}
                   onClear={() => updateChapter(index, "tags", [])}
                   maxSelections={MAX_TAGS_PER_CHAPTER}
-                  searchable
-                  closeOnMouseLeave
                 />
                 <SelectedValues values={chapter.tags} />               
               </div>

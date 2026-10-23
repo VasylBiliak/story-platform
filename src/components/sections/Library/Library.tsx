@@ -98,26 +98,6 @@ export default function Library() {
     refresh();
   };
 
-  const handleGenreToggle = (genre: string) => {
-    toggleGenre(genre);
-    setTimeout(() => refresh(), 0);
-  };
-
-  const handleClearGenres = () => {
-    clearGenres();
-    setTimeout(() => refresh(), 0);
-  };
-
-  const handleTagToggle = (tag: string) => {
-    toggleTag(tag);
-    setTimeout(() => refresh(), 0);
-  };
-
-  const handleClearTags = () => {
-    clearTags();
-    setTimeout(() => refresh(), 0);
-  };
-
   return (
     <section className="flex flex-col gap-8 px-2 sm:px-4 md:px-8 py-8" id="books">
       <h1 className="font-[Oswald] text-3xl font-bold uppercase tracking-[3px] mb-8 text-text-primary flex justify-center align-center">
@@ -132,12 +112,13 @@ export default function Library() {
         onSortChange={handleSortChange}
         availableGenres={availableGenres}
         selectedGenres={selectedGenres}
-        onGenreToggle={handleGenreToggle}
-        onClearGenres={handleClearGenres}
+        // Changing genres or tags refetches via useBooksPagination's own effect
+        onGenreToggle={toggleGenre}
+        onClearGenres={clearGenres}
         availableTags={availableTags}
         selectedTags={selectedTags}
-        onTagToggle={handleTagToggle}
-        onClearTags={handleClearTags}
+        onTagToggle={toggleTag}
+        onClearTags={clearTags}
         isLoading={isLoading}
       />
 
